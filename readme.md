@@ -1,61 +1,120 @@
-## podman 替换 docker
+这份 Wiki 文档旨在帮助团队成员或使用者快速理解该 Docker镜像的功能、构建方法以及使用方式。
+
 ---
 
-### 第1步：准备文件
+# 🐳 Codex Development Environment (Ubuntu 22.04 + SSH + Multimedia + UV)
 
-在你的项目文件夹中，创建以下两个文件：
-参考这个文件:https://www.warp.dev/terminus/ssh-docker-container
+## 📖 简介 (Overview)
 
-**1. `Dockerfile`** (核心文件)
+这是一个基于 `Ubuntu 22.04` 构建的高级开发环境镜像。它专为 **VS Code Remote - SSH** 开发模式优化，集成了现代化的 Python 包管理工具 `uv`、强大的多媒体处理库 (GStreamer/MPV) 以及友好的交互式 Shell (Fish)。
 
-```dockerfile
-FROM ubuntu
-RUN apt-get update && apt-get install -y openssh-server
-RUN mkdir /var/run/sshd
-RUN echo "root:password" | chpasswd
-RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
-CMD ["/usr/sbin/sshd", "-D"]
-```
+该镜像特别解决了 VS Code 远程连接时的超时和协议冲突问题，是一个开箱即用的多媒体/Python 开发沙盒。
 
-**2. `id_rsa.pub`** (你的 SSH 公钥)
+## ✨ 核心特性 (Features)
 
-如果你还没有 SSH 密钥对，请在你的**本地电脑**（不是在 Dockerfile 里）打开终端并运行以下命令来生成一个新的：
+*   **基础系统**: Ubuntu 22.04 LTS (Jammy Jellyfish).
+*   **开发工具**:
+    *   `git`, `curl`, `openssh-server`.
+    *   **Python 工具链**: 集成 [astral.sh/uv](https://github.com/astral-sh/uv)，超高速 Python 包管理器。
+*   **多媒体支持**:
+    *   全套 **GStreamer** 插件 (base, good, bad, ugly, libav, tools).
+    *   **libmpv** 开发库 (包含软链接修复).
+*   **终端体验**:
+    *   预装 **Fish Shell**，且配置为登录后自动切换（保留 Bash 兼容性）。
+    *   UTF-8 Locale 配置，防止中文乱码。
+*   **SSH & VS Code 优化**:
+    *   禁用了 MOTD (每日消息)、Last Login 和 DNS 解析，极速连接。
+    *   修复了 VS Code Remote 因欢迎信息过长导致的连接挂起问题。
+
+---
+
+## 🛠️ 构建指南 (Build Instructions)
+
+将提供的 `Dockerfile` 保存到当前目录，运行以下命令构建镜像：
 
 ```bash
-# -t 指定类型, -b 指定强度, -f 指定文件名, -N "" 表示无密码
-ssh-keygen -t rsa -b 4096 -f ./id_rsa -N ""
+# 构建镜像，标签为 codex-dev:latest
+docker build -t codex-dev:latest .
 ```
-这将在当前目录下生成 `id_rsa` (私钥) 和 `id_rsa.pub` (公钥) 两个文件。**我们只需要公钥 `id_rsa.pub`**。
 
 ---
 
-### 第2步：构建 Docker 镜像
+## 🚀 启动容器 (Usage)
 
-现在，你的文件夹里应该有 `Dockerfile`, `id_rsa`, `id_rsa.pub` 这几个文件。
-
-打开终端，进入该文件夹，然后运行 `docker build` 命令。我们将通过 `--build-arg` 把公钥内容传递给 Dockerfile。
+### 1. 启动容器
+启动容器并将容器内的 SSH 端口 (22) 映射到宿主机的端口 (例如 2222)：
 
 ```bash
-docker build \
-  --build-arg SSH_USER=devuser \
-  --build-arg SSH_PUBLIC_KEY="$(cat id_rsa.pub)" \
-  -t python-poetry-ssh .
+docker run -d \
+  --name codex-container \
+  -p 2222:22 \
+  -v $(pwd)/workspace:/codex \
+  codex-dev:latest
 ```
-**命令解释：**
-*   `--build-arg SSH_USER=devuser`：设置容器内的用户名为 `devuser`。你可以改成你喜欢的名字。
-*   `--build-arg SSH_PUBLIC_KEY="$(cat id_rsa.pub)"`：读取 `id_rsa.pub` 文件的内容，并将其作为参数传递给 Dockerfile。
-*   `-t python-poetry-ssh`：给这个镜像起一个名字（tag），方便后续使用。
-*   `.`：表示 Dockerfile 在当前目录。
+*   `-p 2222:22`: 将宿主机的 2222 端口转发到容器的 SSH。
+*   `-v ...`: (可选) 将本地代码目录挂载到容器内的 `/codex`。
+
+### 2. SSH 连接信息
+*   **用户名**: `root`
+*   **默认密码**: `my_secure_password` (⚠️ **注意**: 仅限开发环境，生产环境请修改 Dockerfile)
+*   **端口**: 映射的端口 (如 2222)
+
+### 3. 使用 VS Code 连接
+在本地机器的 `~/.ssh/config` 文件中添加以下配置，即可通过 VS Code 的 Remote-SSH 插件一键连接：
+
+```ssh
+Host codex-dev
+    HostName localhost
+    User root
+    Port 2222
+    # 防止因容器重建导致指纹变化报错
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+```
 
 ---
-### 总结与安全提示
 
-*   **为什么不用密码？** 公钥认证远比密码安全，可以防止暴力破解，是服务器管理的标准做法。
-*   **不要暴露到公网**：这个 `Dockerfile` 是为**本地开发**设计的。如果你需要将带有 SSH 的容器部署到公网服务器，请务必配置防火墙规则，限制可访问的 IP 地址，以防被攻击。
-*   你提到了两次 `poetry`，这可能是个笔误，但请放心，Poetry 已经完美地安装在镜像中了！
-*   
+## ⚙️ 关键配置详解 (Configuration Details)
 
-### podman build
-podman build \
---force-rm \
--t python-uv-ssh .
+### Python 环境 (UV)
+*   `uv` 安装路径: `/root/.local/bin` 或 `/root/.cargo/bin`。
+*   环境变量 `PATH` 已更新，在 Bash 和 Fish 中均可直接使用 `uv` 命令。
+
+### Shell 行为 (Bash -> Fish)
+Dockerfile 包含以下逻辑：
+```bash
+if [[ $- == *i* ]] && [[ "$TERM_PROGRAM" != "vscode" ]]; then exec fish; fi
+```
+*   **原理**: 当你通过终端 (Terminal) SSH 登录时，系统会自动切换到 `fish` shell 以提供更好的交互体验。
+*   **VS Code 特例**: 当 VS Code 后台连接时 (`TERM_PROGRAM=vscode`)，保持使用 `bash`，这能防止 VS Code 的自动脚本因不兼容 Fish 语法而报错。
+
+### VS Code 连接修复 (SSH Tweaks)
+为了解决 VS Code "Setting up SSH Host..." 卡死或超时的问题，做了以下处理：
+1.  **创建 `.hushlogin`**: 屏蔽登录欢迎语。
+2.  **修改 PAM/SSHD 配置**: 彻底禁用 `pam_motd` 和 `PrintLastLog`。
+3.  **禁用 UseDNS**: 加快 SSH 握手速度。
+
+### 多媒体库路径
+*   **MPV**: 创建了软链接 `/usr/lib/libmpv.so.1` -> `/usr/lib/x86_64-linux-gnu/libmpv.so`，方便某些依赖库直接调用。
+*   **GStreamer**: 标准安装路径，可通过 `gst-inspect-1.0` 验证。
+
+---
+
+## ⚠️ 常见问题 (Troubleshooting)
+
+**Q: 为什么登录后显示的不是 Fish Shell？**
+A: 如果你是通过 VS Code 的集成终端连接，可能会受到 VS Code 设置的影响。如果是直接在命令行使用 `ssh root@localhost -p 2222`，应该会自动进入 Fish。如果未进入，输入 `fish` 即可。
+
+**Q: 如何修改 root 密码？**
+A:
+1.  **构建时修改**: 编辑 Dockerfile 中的 `RUN echo 'root:my_secure_password' | chpasswd` 这一行。
+2.  **运行时修改**: 进入容器后运行 `passwd` 命令。
+
+**Q: GStreamer 缺少某个插件？**
+A: 当前安装了 `base`, `good`, `bad`, `ugly` 和 `libav`。如果还需要其他特定插件，请修改 Dockerfile 中的 `apt-get install` 部分。
+
+---
+
+## 📋 维护记录 (Changelog)
+
+*   **v1.0**: 初始版本。集成 Ubuntu 22.04, SSH, Fish, UV, GStreamer 全家桶。修复 VS Code 连接稳定性问题。
