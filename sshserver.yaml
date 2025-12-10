@@ -1,0 +1,40 @@
+# @Author: Your name
+# @Date:   2025-12-09 20:53:30
+# @Last Modified by:   Your name
+# @Last Modified time: 2025-12-10 08:16:02
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-5.7.0
+
+# NOTE: If you generated this yaml from an unprivileged and rootless podman container on an SELinux
+# enabled system, check the podman generate kube man page for steps to follow to ensure that your pod/container
+# has the right permissions to access the volumes added.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2025-12-09T12:51:55Z"
+  labels:
+    app: beautifultorvalds-pod
+  name: beautifultorvalds-pod
+spec:
+  containers:
+  - env:
+    - name: TERM
+      value: xterm
+    image: localhost/vscode-dev-env
+    name: vscode-dev-env
+    ports:
+    - containerPort: 22
+      hostPort: 2222
+    stdin: true
+    tty: true
+    volumeMounts:
+    - mountPath: /codex
+      name: home-feelingvi-github-flet-podman-dex-codex-host-0
+  volumes:
+  - hostPath:
+      path: /home/feelingvi/Github/flet_podman_dex/codex
+      type: Directory
+    name: home-feelingvi-github-flet-podman-dex-codex-host-0
