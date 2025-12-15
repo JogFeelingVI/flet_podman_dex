@@ -2,10 +2,20 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-15 00:52:00
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2025-12-15 06:18:32
+# @Last Modified time: 2025-12-15 13:30:38
 import flet as ft
 import math
 
+class tipsEx(ft.SnackBar):
+    def __init__(self, text:str):
+        super().__init__(text)
+        self._text = ft.Text(text, color=ft.Colors.RED_200)
+        self.content = self._text
+        self.bgcolor = ft.Colors.YELLOW_100
+        
+    
+    def setText(self, text:str):
+        self._text.value = text
 
 def main(page: ft.Page):
     page.title = "youtebe flet exp 2"
@@ -28,11 +38,14 @@ def main(page: ft.Page):
         keyboard_type=ft.KeyboardType.NUMBER,
     )
     
+    _tips = tipsEx(f"ALL Side Clear.")
+    
     def clear_click(e):
-        side_length_a.value = side_length_b.value = side_length_c.value = ''
-        page.open(ft.SnackBar(ft.Text(f"ALL Side number is clear.")))
+        side_length_a.value = side_length_b.value = side_length_c.value = ""
+        _tips.setText(f'Clear all triangle data.')
+        page.open(_tips)
         page.update()
-        
+
     def done_click(e):
         abc = []
         try:
@@ -40,17 +53,21 @@ def main(page: ft.Page):
             abc.append(int(side_length_b.value))
             abc.append(int(side_length_c.value))
         except:
-            page.open(ft.SnackBar(ft.Text(f"Error: Side number is None.")))
+            _tips.setText('None of the data points for the triangle can be empty.')
             return
+        print(f'{abc=}')
         abc.sort()
-        a,b,c = abc
-        if a+b<=c:
-            page.open(ft.SnackBar(ft.Text(f"Error: The input data cannot form a triangle.")))
+        a, b, c = abc
+        if a + b <= c:
+            _tips.setText('The data you entered does not meet the definition of a triangle.')
+            page.open(_tips)
             return
-        s=(a+b+c)/2
+        s = (a + b + c) / 2
         area = math.sqrt(s * (s - a) * (s - b) * (s - c))
-        page.open(ft.SnackBar(ft.Text(f"Area: Ttriangle a {a} b {b} {c} area is {area}.")))
-            
+        _tips.setText(f'T-abc {a}/{b}/{c} area {area}')
+        page.open(_tips)
+        page.update()
+
     page.add(
         ft.Column(
             [
@@ -68,14 +85,26 @@ def main(page: ft.Page):
                 ft.Divider(height=5),
                 ft.Row(
                     [
-                        ft.ElevatedButton(text="Clear", color=ft.Colors.RED_100, on_click=clear_click),
-                        ft.ElevatedButton(text="Done", color=ft.Colors.GREEN_100, on_click=done_click),
+                        ft.ElevatedButton(
+                            text="Clear",
+                            bgcolor=ft.Colors.RED,
+                            color=ft.Colors.WHITE,
+                            on_click=clear_click,
+                        ),
+                        ft.ElevatedButton(
+                            text="Done",
+                            bgcolor=ft.Colors.GREEN_100,
+                            color=ft.Colors.WHITE,
+                            on_click=done_click,
+                        ),
                     ]
                 ),
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Text("海伦公式 (Heron's Formula)", weight=ft.FontWeight.BOLD),
+                            ft.Text(
+                                "海伦公式 (Heron's Formula)", weight=ft.FontWeight.BOLD
+                            ),
                             ft.Text("公式: \(S=\sqrt{p(p-a)(p-b)(p-c)}\)。"),
                             ft.Text("条件: 已知三角形三条边长 \(a,b,c\)。"),
                             ft.Text("步骤:", weight=ft.FontWeight.BOLD),
@@ -83,7 +112,7 @@ def main(page: ft.Page):
                             ft.Text("代入公式计算面积 \(S\)。"),
                         ]
                     )
-                )
+                ),
             ]
         )
     )
