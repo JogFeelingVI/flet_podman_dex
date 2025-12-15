@@ -1,4 +1,4 @@
-# Jackpot app
+# Exp1 app
 
 ## Run the app
 
