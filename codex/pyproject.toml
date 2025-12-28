@@ -8,5 +8,5 @@ dependencies = []
 
 [dependency-groups]
 dev = [
-    "flet[all]>=0.28.3",
+    "flet[all]>=0.80.0",
 ]
