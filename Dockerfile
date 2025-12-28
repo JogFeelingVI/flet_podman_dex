@@ -41,7 +41,7 @@ RUN mkdir /codex
 # 3. 配置 SSH 服务
 RUN mkdir /var/run/sshd
 # 设置 root 密码 (请根据需要修改)
-RUN echo 'root:my_secure_password' | chpasswd
+RUN echo 'root:code123456' | chpasswd
 # 允许 root 远程登录
 RUN echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
 # 禁止 SSH DNS 解析，加快连接速度
