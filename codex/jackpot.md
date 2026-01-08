@@ -180,3 +180,75 @@ ft.app(target=main)
 12-31 20:09:44.627 21184 21222 I serious_python:          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 12-31 20:09:44.627 21184 21222 I serious_python: FileNotFoundError: [Errno 2] No such file or directory: '/data/user/0/com.flet.buildflet/app_flutter/jackpot_settings.json'
 ```
+
+### fix dockder
+在 Docker + SSH + VSCode 转发这种链路下，Flet 运行慢通常不是因为代码逻辑，而是因为 **“文件监控压力”、“网络隧道延迟”** 以及 **“Web 资源重复加载”** 导致的。
+
+你可以通过以下几个针对性的优化，显著提升热重载（Hot Reload）的速度：
+
+### 1. 优化 Flet 监听范围（最有效）
+Flet 在热重载时会扫描项目目录。如果你的 Docker 容器里有大量的冗余文件（如 `.venv` 虚拟环境、`__pycache__` 或大量数据文件），Flet 扫描它们会消耗大量 CPU，导致保存后延迟几秒才刷新。
+
+**解决方法：** 使用 `--ignore` 参数排除无关文件夹。
+```bash
+# 假设你的虚拟环境叫 .venv，且有很多缓存
+flet run --web --port 8550 --ignore ".venv, __pycache__, build, storage" app.py
+```
+
+### 2. 解决 VSCode 端口转发的延迟
+VSCode 的 `Ports` 转发是通过 SSH 隧道实现的，有时其内部的“自动检测”机制会导致数据传输卡顿。
+
+**解决方法：** 
+*   在 VSCode 端口面板中，右键点击 `8550` 端口，将 **"Port Forwarding Protocol" (转发协议)** 从 `Auto` 改为 **`HTTPS`** (如果是 https) 或 **`HTTP`** (通常设为 HTTP)。
+*   如果你在局域网内，**不要用 VSCode 转发**，直接在浏览器访问 `http://服务器IP:8550`。这会绕过 SSH 加密隧道，速度极快（前提是 Docker 启动时用了 `-p 8550:8550`）。
+
+### 3. 禁止 Python 生成字节码文件
+Docker 容器在写入 `__pycache__` 时，如果磁盘映射（Volume）性能一般，会拖慢进程重载速度。
+
+**解决方法：** 环境变量设置不生成缓存。
+```bash
+export PYTHONDONTWRITEBYTECODE=1
+flet run --web --port 8550 app.py
+```
+
+### 4. 减少 Web 端资源加载
+Flet Web 模式在每次热重载时，浏览器可能会尝试重新下载一些 JS 资源。
+
+**解决方法：** 
+*   **保持浏览器标签页不关闭**：Flet 的热重载是局部更新或自动重刷，不要手动频繁按 F5。
+*   **检查 CPU 占用**：在 Docker 里运行 `top`。如果 `python` 进程在保存代码后 CPU 瞬间飙到 100% 且持续很久，说明你的 `flet run` 正在扫描太多的文件（回到第 1 点解决）。
+
+---
+## filter
+### 现在的布局如下
+```python
+# Filter 页面
+    filter_view = ft.Column(
+        controls=[
+            ft.Text("Filter", size=25, weight=ft.FontWeight.BOLD),
+            ft.Text("Add various filtering criteria here:"),
+            ft.TextField(label="关键词过滤", prefix_icon=ft.Icons.FILTER_2_SHARP),
+            ft.Dropdown(
+                label="分类筛选",
+                options=[
+                    ft.dropdown.Option("选项 1"),
+                    ft.dropdown.Option("选项 2"),
+                ],
+            ),
+            ft.Checkbox(label="仅显示有效数据"),
+        ],
+        expand=True,
+    )
+```
+### 改变目的
+- t.TextField(label="关键词过滤" 一下的内容都不需要，
+- 添加一个按钮`add filter`
+- 弹出一个对话框,标题是`Filter Settings`
+- 体一行是 `：Target` 是一个下来列表，显示在”setings“页面启用的选项
+- 第二行 `Conditions`，是一个可以自动填充的文本输入框。
+- 第三行 显示`Apply`, `Cancel` 两个按钮
+- apply用红色背景，白色字体
+- Cancel 用主题默认颜色就可以，
+
+## 当用户点击apply后，对话框消失，在页面中的列表中显示`Conditions`输入的内容，使用ListTile来显示
+- `ListTile` 向右滑动删除，长安返回`Filter Settings`对话框编辑，

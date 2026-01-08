@@ -1,7 +1,7 @@
 # @Author: Your name
 # @Date:   2025-12-09 20:53:30
-# @Last Modified by:   Your name
-# @Last Modified time: 2025-12-10 08:16:02
+# @Last Modified by:   JogFeelingVI
+# @Last Modified time: 2026-01-01 08:52:38
 # Save the output of this file and use kubectl create -f to import
 # it into Kubernetes.
 #
@@ -23,11 +23,19 @@ spec:
   - env:
     - name: TERM
       value: xterm
+    - name: PYTHONDONTWRITEBYTECODE
+      value: 1
+    - name: SSH_PASS
+      value: "lxy929123"
     image: localhost/vscode-dev-env
     name: vscode-dev-env
+    command: ["/bin/sh", "-c"]
+    args: [echo "root:$(SSH_PASS)" | chpasswd && /usr/sbin/sshd -D]
     ports:
     - containerPort: 22
       hostPort: 2222
+    - containerPort: 56789
+      hostPort: 56789
     stdin: true
     tty: true
     volumeMounts:
