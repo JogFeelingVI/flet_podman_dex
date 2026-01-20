@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-20 11:03:11
+# @Last Modified time: 2026-01-20 13:00:19
 from .ColorTokenizer import Tokenizer, spiltfortarget
 from .jackpot_core import filterFunc
 from .SnackBar import get_snack_bar
@@ -15,7 +15,7 @@ import asyncio
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
-jackpot_filers = os.path.join(app_data_path, "jackpot_filters.dict")
+# jackpot_filers = os.path.join(app_data_path, "jackpot_filters.dict")
 
 
 class UserdirButton(ft.TextButton):
@@ -615,11 +615,18 @@ class FiltersList(ft.Card):
         super().__init__()
         self.content = self.__build_card()
         self.editItemCallback = None
+        self.add_closed_stat = None
         self.filtersAll_change = "none"  # add none del save
         self.filtersAll = []
 
     def setting_edit_Callback(self, edit_item_callback=None):
         self.editItemCallback = edit_item_callback
+        
+    def setting_command_stat(self,add_closed_stat:None):
+        self.add_closed_stat = add_closed_stat
+        
+    def givefilterall(self):
+        return self.filtersAll
 
     def did_mount(self):
         self.running = True
@@ -646,7 +653,6 @@ class FiltersList(ft.Card):
             return
 
         controls = self.content.content.controls
-        controls.clear()
 
         def deleteForE(e):
             if not isinstance(e.control, ft.Chip):
@@ -662,11 +668,13 @@ class FiltersList(ft.Card):
                 return
             e_chip = e.control
             e_script = e.control.data
-            print(f"edit {e_chip.data}")
+            # print(f"edit {e_chip.data}")
             controls.remove(e_chip)
             self.filtersAll.remove(e_script)
             if self.editItemCallback:
                 self.editItemCallback(e_script)
+            if self.add_closed_stat:
+                self.add_closed_stat()
             e_chip.update()
 
         self.filtersAll.append(_scd)
@@ -688,15 +696,22 @@ class FiltersList(ft.Card):
         )
         self.filtersAll_change = "add"
         self.content.content.update()
+        self.page.run_task(self.filter_data_task)
+        
+    async def filter_data_task(self):
+        # self.page.session.store.set("filters", fiter_data)
+        await self.page.session.store.set("filters", self.filtersAll)
 
     def __command_button(self):
         """Add, Apply, Cancel"""
         return ft.Row(
             wrap=True,
             controls=[
-                ft.Text(
-                    "Various filter commands can be added to narrow down the massive pool of phone numbers."
+                ft.Switch(
+                    label="auto save",
+                    value=False,
                 ),
+                # "Various filter commands can be added to narrow down the massive pool of phone numbers."
             ],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.START,
@@ -704,9 +719,9 @@ class FiltersList(ft.Card):
 
 
 class InputPad(ft.Card):
-    def __init__(self, applycallback=None):
+    def __init__(self):
         super().__init__()
-        self.applycallback = applycallback
+        self.applycallback = None
         self.visible = False
         self.__FT_show = self.__load_FT_show()
         self.content = self.__build_card()
@@ -719,6 +734,9 @@ class InputPad(ft.Card):
 
     def will_unmount(self):
         self.running = False
+        
+    def settingApplyCallback(self, applycallback=None):
+        self.applycallback = applycallback
 
     def openPad(self):
         """新增加模式"""
@@ -740,6 +758,8 @@ class InputPad(ft.Card):
                     text_spans = item.controls[0].spans
                     text_spans[1].text = script['func']
                     text_spans[3].text = script['target']
+                    self.pad_data['func'] = script['func']
+                    self.pad_data['target'] = script['target']
 
                 case "__command_input":
                     if not isinstance(item, ft.TextField):
@@ -863,7 +883,7 @@ class InputPad(ft.Card):
     def handle_apply_click(self, e):
         if "" in self.pad_data.values():
             return
-        print(f'handle_apply_click {self.pad_data=}')
+        # print(f'handle_apply_click {self.pad_data=}')
         if self.applycallback:
             self.applycallback(scriptd=self.pad_data)
 
@@ -934,6 +954,8 @@ class CommandList(ft.Card):
         super().__init__()
         self.content = self.__build_card()
         self.addcallback = None
+        self.filterAddItem  = None
+        self.give_data = None
         self.automatically_save = False
 
     def did_mount(self):
@@ -941,6 +963,9 @@ class CommandList(ft.Card):
 
     def will_unmount(self):
         self.running = False
+        
+    def setting_give_data(self, give_data:None):
+        self.give_data = give_data
 
     def __build_card(self):
         return ft.Container(
@@ -958,6 +983,7 @@ class CommandList(ft.Card):
             controls=[
                 ft.TextButton(
                     expand=1,
+                    key='add_close',
                     icon=ft.Icons.FILTER,
                     content="Add",
                     on_click=self.handle_add,
@@ -966,27 +992,35 @@ class CommandList(ft.Card):
                     expand=1,
                     icon=ft.Icons.SAVE,
                     content="Save",
-                    # on_click=self.handle_Apply,
+                    on_click=self.handle_Save,
                 ),
                 ft.TextButton(
                     expand=1,
                     icon=ft.Icons.FILE_OPEN,
                     content="Open",
-                    # on_click=self.handle_Cancel,
+                    on_click=self.handle_Open,
                 ),
             ],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
         
-    def setting_edit_stat(self):
+    def setting_edit_stat_open(self):
         # e.control.content = "Add"
         # e.control.icon = ft.Icons.FILTER
-        item = self.content
-        pass
+        row_controls = self.content.content.controls
+        # 查找 key 为 "btn_add" 的控件
+        add_close = next((c for c in row_controls if c.key == "add_close"), None)
+        if not isinstance(add_close, ft.TextButton):
+            return
+        add_close.content = "Closed"
+        add_close.icon = ft.Icons.CLOSE
     
     def setting_add_callback(self, addCallBack=None):
         self.addcallback = addCallBack
+        
+    def setting_filte_add_item(self, filterAddItem=None):
+        self.filterAddItem = filterAddItem
 
     def handle_add(self, e):
         # self.row_name_char += 1
@@ -1004,9 +1038,39 @@ class CommandList(ft.Card):
                     e.control.icon = ft.Icons.FILTER
                 e.control.update()
 
-    def handle_Cancel(self):
-        self.visible = False
-        self.update()
+    async def handle_Save(self):
+        if not self.give_data:
+            return
+        fiter_data = self.give_data()
+        if not fiter_data:
+            return
+        self.page.session.store.set("filters", fiter_data)
+        temp = await self.page.shared_preferences.get("user_dir")
+        if self.page.web:
+            temp = app_data_path
+        jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
+        with open(jackpot_filters, "w", encoding="utf-8") as f:
+            for item in fiter_data:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                
+    async def handle_Open(self):
+        temp = await self.page.shared_preferences.get("user_dir")
+        if self.page.web:
+            temp = app_data_path
+        jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
+        fiter_data = []
+        with open(jackpot_filters, "r", encoding="utf-8") as f:
+            for line in f:
+                # 去掉行尾换行符并确保行不为空
+                line = line.strip()
+                if line:
+                    # 将每一行的 JSON 字符串转回字典对象
+                    item = json.loads(line)
+                    fiter_data.append(item)
+                    if self.filterAddItem:
+                        self.filterAddItem(item)
+        self.page.session.store.set("filters", fiter_data)
+        
 
 
 #
@@ -1022,11 +1086,15 @@ class FilterPage:
     def __init__(self, page: ft.Page):
         self.page = page
         self.Filters_cmd_list = FiltersList()
-        self.Input_Pad = InputPad(applycallback=self.Filters_cmd_list.addFilter)
+        self.Input_Pad = InputPad()
         self.Command_List = CommandList()
         
+        self.Input_Pad.settingApplyCallback(applycallback=self.Filters_cmd_list.addFilter)
         self.Command_List.setting_add_callback(addCallBack=self.Input_Pad.openPad)
+        self.Command_List.setting_give_data(give_data=self.Filters_cmd_list.givefilterall)
+        self.Command_List.setting_filte_add_item(filterAddItem=self.Filters_cmd_list.addFilter)
         self.Filters_cmd_list.setting_edit_Callback(self.Input_Pad.editePad)
+        self.Filters_cmd_list.setting_command_stat(add_closed_stat=self.Command_List.setting_edit_stat_open)
         # ? new control
         # self.filters_list = []
         # self.editing_index = -1
@@ -1257,32 +1325,32 @@ class FilterPage:
     #     self.page.session.store.set("filters", self.filters_list)
     #     self.page.update()
 
-    def save_file(self, user_dirs: str):
-        file_path = os.path.join(user_dirs, "jackpot_filters.dict")
-        with open(file_path, "w", encoding="utf-8") as f:
-            for item in self.filters_list:
-                f.write(json.dumps(item, ensure_ascii=False) + "\n")
-        self.page.show_dialog(get_snack_bar(f"{file_path} saved successfully."))
+    # def save_file(self, user_dirs: str):
+    #     file_path = os.path.join(user_dirs, "jackpot_filters.dict")
+    #     with open(file_path, "w", encoding="utf-8") as f:
+    #         for item in self.filters_list:
+    #             f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    #     self.page.show_dialog(get_snack_bar(f"{file_path} saved successfully."))
 
-    def load_file(self, user_dirs: str):
-        file_path = os.path.join(user_dirs, "jackpot_filters.dict")
-        if not os.path.isfile(file_path):
-            return
-        filters_list = []
-        with open(file_path, "r", encoding="utf-8") as f:
-            for line in f:
-                # 去掉行尾换行符并确保行不为空
-                line = line.strip()
-                if line:
-                    # 将每一行的 JSON 字符串转回字典对象
-                    item = json.loads(line)
-                    filters_list.append(item)
-        if not filters_list:
-            return
-        self.filters_list = filters_list
-        self.page.session.store.set("filters", self.filters_list)
-        self.render_filters()
-        self.page.update()
+    # def load_file(self, user_dirs: str):
+    #     file_path = os.path.join(user_dirs, "jackpot_filters.dict")
+    #     if not os.path.isfile(file_path):
+    #         return
+    #     filters_list = []
+    #     with open(file_path, "r", encoding="utf-8") as f:
+    #         for line in f:
+    #             # 去掉行尾换行符并确保行不为空
+    #             line = line.strip()
+    #             if line:
+    #                 # 将每一行的 JSON 字符串转回字典对象
+    #                 item = json.loads(line)
+    #                 filters_list.append(item)
+    #     if not filters_list:
+    #         return
+    #     self.filters_list = filters_list
+    #     self.page.session.store.set("filters", self.filters_list)
+    #     self.render_filters()
+    #     self.page.update()
 
     def get_filter_view(self):
         # self.page.overlay.append(self.dlg)
