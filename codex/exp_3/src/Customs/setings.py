@@ -2,10 +2,8 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-19 07:52:10
+# @Last Modified time: 2026-01-26 14:46:02
 
-from .lotteryballs import LotteryBalls
-from .SnackBar import get_snack_bar
 from .DraculaTheme import DraculaColors
 from .jackpot_core import randomData
 import flet as ft
@@ -86,11 +84,11 @@ Lotter_Data = {
 
 
 class input_user_rule(ft.Card):
-    def __init__(self, callback=None):
+    def __init__(self):
         super().__init__()
         self.visible = False
         self.content = self.__build_card()
-        self.callback = callback
+        self.render_filters = None
         self.row_name_char = 65
         self.templejson = {
             "randomData": {
@@ -98,6 +96,9 @@ class input_user_rule(ft.Card):
                 "PA": {"enabled": True, "range_start": 0, "range_end": 9, "count": 1},
             }
         }
+
+    def setting_render_filters(self, render_filters=None):
+        self.render_filters = render_filters
 
     def did_mount(self):
         self.running = True
@@ -225,8 +226,8 @@ class input_user_rule(ft.Card):
         with open(jackpot_seting, "w", encoding="utf-8") as f:
             json.dump(temp, f, indent=4, ensure_ascii=False)
         self.page.session.store.set("settings", temp)
-        if self.callback:
-            self.callback()
+        if self.render_filters:
+            self.render_filters()
         self.handle_Cancel()
 
     def Convert_to_list(self, lable_value: str):
@@ -245,19 +246,70 @@ class input_user_rule(ft.Card):
 
 
 class showRule(ft.Card):
+    __name__ = "showRule"
+
     def __init__(self):
         super().__init__()
         self.content = self.__build_card()
 
     def did_mount(self):
         self.running = True
-        self.updateCard()
+        try:
+            self.updateCard()
+        except Exception as e:
+            print(f"{self.__name__} running error {e}.")
+        finally:
+            print(f"{self.__name__} running over.")
 
     def will_unmount(self):
         self.running = False
 
     def updateCard(self):
         self.page.run_task(self.__update_card)
+
+    def get_lottery_text(self, exp: str):
+        spans = []
+        before, sep, after = exp.partition("+")
+        # print([before.strip(), sep.strip(), after.strip()])
+        # 2. 匹配逻辑
+        match [before.strip(), sep.strip(), after.strip()]:
+            # 情况 A: 刚好两组数据（如 6+1 模式）
+            case [b, s, a] if len(b) > len(a) and s == "+":
+                # 第一组（红球）
+                spans.append(
+                    ft.TextSpan(
+                        b,
+                        ft.TextStyle(
+                            color=DraculaColors.RED, weight=ft.FontWeight.W_900
+                        ),
+                    )
+                )
+                # 分隔符
+                spans.append(
+                    ft.TextSpan(
+                        f" {s} ",
+                        ft.TextStyle(color=DraculaColors.PURPLE, weight="W_900"),
+                    )
+                )
+                # 第二组（紫/蓝球）
+                spans.append(
+                    ft.TextSpan(
+                        a,
+                        ft.TextStyle(color=DraculaColors.PURPLE, weight="W_900"),
+                    )
+                )
+
+            # 情况 B: 多组数据（3组或更多）
+            case [b, s, a] if s == a == "" and b != a:
+                spans.append(
+                    ft.TextSpan(
+                        b, ft.TextStyle(color=DraculaColors.RED, weight="W_900")
+                    )
+                )
+        return ft.Text(
+            size=20,
+            spans=spans,
+        )
 
     async def __update_card(self):
         if not self.running:
@@ -270,12 +322,13 @@ class showRule(ft.Card):
         if not randomDatax:
             return
         example = randomData(seting=randomDatax).get_exp()
-        textlist = [LotteryBalls(example, 32, "LE"), ft.Divider()]
+        # textlist = [LotteryBalls(example, 32, "LE"), ft.Divider()]
+        textlist = [self.get_lottery_text(example), ft.Divider()]
         for key, item in randomDatax.items():
             if key == "note":
                 textlist.append(
                     ft.Text(
-                        f"🚩Note: {item}",
+                        f"{item}",
                         size=15,
                         weight="bold",
                         color=DraculaColors.ORANGE,
@@ -305,7 +358,7 @@ class showRule(ft.Card):
             # expand=True,
             # opacity=0.65,
             width=float("inf"),
-            border=ft.Border.all(2, DraculaColors.COMMENT),
+            border=ft.Border.all(2, DraculaColors.ORANGE),
             border_radius=10,
             content=ft.Column(
                 tight=True,
@@ -324,12 +377,18 @@ class showRule(ft.Card):
 class DefaultSettings(ft.Card):
     """默认设置指示器"""
 
-    def __init__(self, add_rule=None, callback=None):
+    def __init__(self):
         super().__init__()
         self.content = self.__build_card()
         # self.apply_rule = {}
-        self.callback = callback
+        self.render_filters = None
+        self.add_rule = None
+
+    def setting_add_rule(self, add_rule=None):
         self.add_rule = add_rule
+
+    def setting_render_filters(self, render_filters=None):
+        self.render_filters = render_filters
 
     def did_mount(self):
         self.running = True
@@ -345,22 +404,12 @@ class DefaultSettings(ft.Card):
             await asyncio.sleep(0.5)
 
             add_rule = ft.Button(
+                bgcolor=DraculaColors.GREEN,
+                color=DraculaColors.BACKGROUND,
                 icon=ft.Icons.RULE,
                 content="new rule",
                 tooltip=ft.Tooltip(message="new game rule"),
                 on_click=self.handle_add_rule,
-                # style=ft.ButtonStyle(
-                #     shape=ft.RoundedRectangleBorder(radius=2),
-                #     color=DraculaColors.FOREGROUND,
-                #     bgcolor=DraculaColors.COMMENT,
-                #     overlay_color=DraculaColors.PINK,
-                #     side=ft.BorderSide(
-                #         1,
-                #         DraculaColors.FOREGROUND,
-                #         ft.BorderSideStrokeAlign.INSIDE,
-                #         ft.BorderStyle.SOLID,
-                #     ),
-                # ),
             )
             button_list = [add_rule]
 
@@ -421,8 +470,8 @@ class DefaultSettings(ft.Card):
             #     get_snack_bar(f"Preset '{name}' has been applied and saved.")
             # )
         self.page.session.store.set("settings", valid_json)
-        if self.callback:
-            self.callback()
+        if self.render_filters:
+            self.render_filters()
 
     def __build_card(self):
         return ft.Container(
@@ -443,40 +492,40 @@ class DefaultSettings(ft.Card):
 class UserDirectory(ft.Card):
     """用户目录指示器"""
 
+    __name__ = "UserDirectory"
+
     def __init__(self):
         super().__init__()
+        self.file_picker = ft.FilePicker()
         self.stored_dir = None
         self.tips = ft.Text(
             "💡 Tip: Set the user directory to store filter files and saved images.",
             color=DraculaColors.FOREGROUND,
-            size=12,
+            size=16,
             max_lines=2,
             # overflow=ft.TextOverflow.ELLIPSIS,
             no_wrap=False,
         )
-        self.button = ft.Button(
+        self.select_dir = ft.Button(
             "User Directory",
             icon=ft.Icons.FOLDER_OFF,
-            on_click=lambda _: self.page.run_task(self.select_user_dif),
-            # style=ft.ButtonStyle(
-            #     shape=ft.RoundedRectangleBorder(radius=2),
-            #     color=DraculaColors.FOREGROUND,
-            #     bgcolor=DraculaColors.COMMENT,
-            #     overlay_color=DraculaColors.PINK,
-            #     # side=ft.BorderSide(
-            #     #     1,
-            #     #     DraculaColors.FOREGROUND,
-            #     #     ft.BorderSideStrokeAlign.INSIDE,
-            #     #     ft.BorderStyle.SOLID,
-            #     # ),
-            # ),
+            bgcolor=DraculaColors.ORANGE,
+            color=DraculaColors.BACKGROUND,
+            on_click=lambda _: self.page.run_task(self.select_user_dir),
         )
+        self.select_dir_done = False
         self.content = self.__build_card()
         self.count = 10
 
     def did_mount(self):
         self.running = True
-        self.page.run_task(self.update_ui)
+        try:
+            if not self.select_dir_done:
+                self.page.run_task(self.Checking_user_dir)
+        except Exception as e:
+            print(f"{self.__name__} running error {e}.")
+        finally:
+            print(f"{self.__name__} running over.")
 
     def will_unmount(self):
         self.running = False
@@ -491,7 +540,7 @@ class UserDirectory(ft.Card):
             content=ft.Row(
                 controls=[
                     self.tips,
-                    self.button,
+                    self.select_dir,
                 ],
                 spacing=5,
                 wrap=True,
@@ -500,33 +549,74 @@ class UserDirectory(ft.Card):
             ),
         )
 
-    async def update_ui(self):
+    async def update_tips_value(self, text: str = None):
+        if not text:
+            return
+        self.tips.value = f"{text}"
+        self.tips.update()
+        await asyncio.sleep(2)
+
+    async def Checking_user_dir(self):
         if self.running:
             await asyncio.sleep(0.5)  # 初始延迟，确保页面加载完成
 
             temp = await self.getuser_dir()
-            print(f"Checking user directory...{temp=}")
             if temp:
-                self.tips.value = f"📂 User Directory: {temp}"
-                self.button.visible = False
-                self.page.update()
+                await self.update_tips_value(
+                    f"Using directory ../{os.path.basename(os.path.normpath(temp))}"
+                )
+                self.select_dir.visible = False
+                self.select_dir.update()
+                self.select_dir_done = True
+
+    # async def import_configs(self, path: str):
+    #     """Do you want to import the configuration file?"""
+    #     default_files = {"jackpot_settings.json":"","jackpot_filters.dict":""}
+    #     with os.scandir(path) as entries:
+    #         for entry in entries:
+    #             if entry.name.lower() in default_files and entry.is_file():
+    #                 # 使用 os.access 检查当前用户是否有读取权限 (R_OK)
+    #                 try:
+    #                     # 尝试直接读取，而不是先检查权限
+    #                     with open(entry.path, "rb") as f:
+    #                         _ = f.read(1024)
+    #                     default_files[entry.name] = entry.path
+    #                     await self.update_tips_value(f"{entry.name} read successfully.")
+    #                 except Exception as e:
+    #                     name = entry.name
+    #                     path = entry.path
+    #                     ext = os.path.splitext(name)[1].lstrip(".").lower()
+    #                     pickFile = await self.file_picker.pick_files(
+    #                         dialog_title=f'Select a "{name}" file',
+    #                         initial_directory=os.path.dirname(path),
+    #                         allowed_extensions=[ext] if ext else None
+    #                     )
+    #                     if pickFile:
+    #                         default_files[entry.name] = pickFile[0].path
+    #     if all(v!="" for _,v in default_files.items()):
+    #         await ft.SharedPreferences().set("Lotter_File", json.dumps(default_files))
+    #         await self.update_tips_value(f"File path update complete.")
 
     async def getuser_dir(self):
         """获取用户目录"""
-        temp = await self.page.shared_preferences.get("user_dir")
+        await self.update_tips_value("Check the user directory.")
         if self.page.web:
             temp = app_data_path
-        print(f"Fetched user directory: {temp=}")
-        return temp
+            await self.update_tips_value("web mode, using system path.")
+            return temp
+        else:
+            temp = await ft.SharedPreferences().get("user_dir")
+            await self.update_tips_value("using SharedPreferences path.")
+            return temp
 
-    async def select_user_dif(self):
+    async def select_user_dir(self):
         if not self.page.web:
-            picked_dir = await ft.FilePicker().get_directory_path(
+            picked_dir = await self.file_picker.get_directory_path(
                 dialog_title="Please select a directory?"
             )
             if picked_dir:
-                await self.page.shared_preferences.set("user_dir", picked_dir)
-                await self.update_ui()
+                await ft.SharedPreferences().set("user_dir", picked_dir)
+                await self.Checking_user_dir()
 
 
 class SetingsPage:
@@ -536,10 +626,14 @@ class SetingsPage:
         self.page = page
 
         self.rule_mode_show = showRule()
-        self.uese_input_mode = input_user_rule(self.render_filters)
-        self.default_setings = DefaultSettings(self.open_dialog, self.render_filters)
+        self.uese_input_mode = input_user_rule()
+        self.default_setings = DefaultSettings()
+        self.User_Directory = UserDirectory()
         self.apply_rule = {}
 
+        self.uese_input_mode.setting_render_filters(self.render_filters)
+        self.default_setings.setting_add_rule(self.open_dialog)
+        self.default_setings.setting_render_filters(self.render_filters)
         self.view = self.get_seting_view()
 
     def get_Selection_line(self, Selection_name: str):
@@ -590,7 +684,7 @@ class SetingsPage:
                 # ft.Row(controls=self.buttons, scroll=ft.ScrollMode.HIDDEN, expand=True),
                 # ft.Divider(),
                 self.rule_mode_show,
-                UserDirectory(),
+                self.User_Directory,
                 self.default_setings,
                 self.uese_input_mode,
             ],

@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-20 13:00:23
+# @Last Modified time: 2026-01-27 04:21:27
 
 from Customs.DraculaTheme import DraculaColors
 from Customs.setings import SetingsPage
@@ -25,16 +25,16 @@ async def main(page: ft.Page):
     # 设置移动端适配的内边距
     page.padding = ft.Padding.only(top=20)
 
-    raw_json = await page.shared_preferences.get("save_data_list")
-    save_data = json.loads(raw_json) if raw_json else []
-    initial_count = len(save_data)
+    # raw_json = await page.shared_preferences.get("save_data_list")
+    # save_data = json.loads(raw_json) if raw_json else []
+    # initial_count = len(save_data)
 
     # --- 4. 预定义底部图标引用 (方便后续动态修改 Badge) ---
     lottery_icon = ft.Icon(
         ft.Icons.DATA_EXPLORATION_OUTLINED,
         color=DraculaColors.PURPLE,
         # 初始赋值：如果大于 0 就显示，否则 None
-        badge=str(initial_count) if initial_count > 0 else None,
+        # badge=str(initial_count) if initial_count > 0 else None,
     )
 
     # --- 页面逻辑控制 ---
@@ -43,13 +43,10 @@ async def main(page: ft.Page):
         # 切换中间的内容区域
         if index == 0:
             content_area.content = setting_class.view
-            page.floating_action_button = None
         elif index == 1:
             content_area.content = filter_class.view
-            page.floating_action_button = None
         elif index == 2:
             content_area.content = lottery_class.view
-            page.floating_action_button = lottery_class.Fab
         page.update()
 
     setting_class = SetingsPage(page)

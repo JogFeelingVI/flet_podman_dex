@@ -2,7 +2,8 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-20 13:00:19
+# @Last Modified time: 2026-01-27 05:21:21
+
 from .ColorTokenizer import Tokenizer, spiltfortarget
 from .jackpot_core import filterFunc
 from .SnackBar import get_snack_bar
@@ -11,6 +12,7 @@ import flet as ft
 import os
 import json
 import asyncio
+import hashlib
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
@@ -18,594 +20,594 @@ jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 # jackpot_filers = os.path.join(app_data_path, "jackpot_filters.dict")
 
 
-class UserdirButton(ft.TextButton):
-    def __init__(
-        self,
-    ):
-        super().__init__()
-        self.showimg = ft.Image(
-            src="filter.png",
-            fit=ft.BoxFit.FIT_HEIGHT,
-            width=328 * 0.45,
-            height=112 * 0.45,
-        )
-        self.content = ft.Container(
-            content=self.showimg,
-            # 设置缩放动画：200毫秒，减速曲线
-            animate=ft.Animation(600, ft.AnimationCurve.EASE_IN_OUT),
-        )
-        self.user_dir = app_data_path
+# class UserdirButton(ft.TextButton):
+#     def __init__(
+#         self,
+#     ):
+#         super().__init__()
+#         self.showimg = ft.Image(
+#             src="filter.png",
+#             fit=ft.BoxFit.FIT_HEIGHT,
+#             width=328 * 0.45,
+#             height=112 * 0.45,
+#         )
+#         self.content = ft.Container(
+#             content=self.showimg,
+#             # 设置缩放动画：200毫秒，减速曲线
+#             animate=ft.Animation(600, ft.AnimationCurve.EASE_IN_OUT),
+#         )
+#         self.user_dir = app_data_path
 
-    def animate_filter(self, flg: int = 1):
-        # 动画逻辑：例如点击后放大并改变颜色
-        scale = 1.2 if flg == 1 else 1.0
-        self.showimg.scale = scale  # 改变颜色
-        self.page.update()
-        # print(f"animate is runing.{self.content.scale} {flg=}")
+#     def animate_filter(self, flg: int = 1):
+#         # 动画逻辑：例如点击后放大并改变颜色
+#         scale = 1.2 if flg == 1 else 1.0
+#         self.showimg.scale = scale  # 改变颜色
+#         self.page.update()
+#         # print(f"animate is runing.{self.content.scale} {flg=}")
 
-    def setting(self, save, load):
-        self.save_funx = save
-        self.load_funx = load
+#     def setting(self, save, load):
+#         self.save_funx = save
+#         self.load_funx = load
 
-    def did_mount(self):
-        self.ads = self.ad()
-        self.page.overlay.append(self.ads)
-        self.runing = True
-        self.content.on_long_press = self.handle_long_press
+#     def did_mount(self):
+#         self.ads = self.ad()
+#         self.page.overlay.append(self.ads)
+#         self.runing = True
+#         self.content.on_long_press = self.handle_long_press
 
-    def will_unmount(self):
-        self.runing = False
+#     def will_unmount(self):
+#         self.runing = False
 
-    async def select_dir(self):
-        stored_dir = await self.page.shared_preferences.get("user_dir")
-        if stored_dir:
-            self.user_dir = stored_dir
-            return self.user_dir
+#     async def select_dir(self):
+#         stored_dir = await ft.SharedPreferences().get("user_dir")
+#         if stored_dir:
+#             self.user_dir = stored_dir
+#             return self.user_dir
 
-        if not self.page.web:
-            picked_dir = await ft.FilePicker().get_directory_path(
-                dialog_title="Please select a directory?"
-            )
-            if picked_dir:
-                await self.page.shared_preferences.set("user_dir", picked_dir)
-                self.user_dir = picked_dir
-                return self.user_dir
+#         if not self.page.web:
+#             picked_dir = await ft.FilePicker().get_directory_path(
+#                 dialog_title="Please select a directory?"
+#             )
+#             if picked_dir:
+#                 await ft.SharedPreferences().set("user_dir", picked_dir)
+#                 self.user_dir = picked_dir
+#                 return self.user_dir
 
-        return self.user_dir
+#         return self.user_dir
 
-    def handle_long_press(self):
-        self.animate_filter(1)
-        self.page.run_task(self.select_dir)
-        self.ads.open = True
-        self.page.update()
+#     def handle_long_press(self):
+#         self.animate_filter(1)
+#         self.page.run_task(self.select_dir)
+#         self.ads.open = True
+#         self.page.update()
 
-    def ad(self):
-        return ft.AlertDialog(
-            title=ft.Text("Filter settings saved"),
-            content=ft.Text("Do you need to save or load jackpot_filters.dict?"),
-            actions=[
-                ft.TextButton("Save", on_click=self.handle_save),
-                ft.TextButton(
-                    "Load",
-                    on_click=self.handle_load,
-                ),
-            ],
-            on_dismiss=lambda _: self.animate_filter(0),
-            actions_alignment=ft.MainAxisAlignment.END,
-        )
+#     def ad(self):
+#         return ft.AlertDialog(
+#             title=ft.Text("Filter settings saved"),
+#             content=ft.Text("Do you need to save or load jackpot_filters.dict?"),
+#             actions=[
+#                 ft.TextButton("Save", on_click=self.handle_save),
+#                 ft.TextButton(
+#                     "Load",
+#                     on_click=self.handle_load,
+#                 ),
+#             ],
+#             on_dismiss=lambda _: self.animate_filter(0),
+#             actions_alignment=ft.MainAxisAlignment.END,
+#         )
 
-    def handle_save(self):
-        # print(f"{self.user_dir=}")
-        try:
-            if self.save_funx:
-                self.save_funx(self.user_dir)
-        finally:
-            self.ads.open = False
-            self.page.update()
+#     def handle_save(self):
+#         # print(f"{self.user_dir=}")
+#         try:
+#             if self.save_funx:
+#                 self.save_funx(self.user_dir)
+#         finally:
+#             self.ads.open = False
+#             self.page.update()
 
-    def handle_load(self):
-        # print(f"{self.user_dir=}")
-        try:
-            if self.load_funx:
-                self.load_funx(self.user_dir)
-        finally:
-            self.ads.open = False
-            self.page.update()
-
-
-class AI_Auto_input(ft.TextField):
-    def __init__(self):
-        super().__init__()
-        self.border = ft.InputBorder.UNDERLINE
-        self.expand = True
-        self.on_change = self.on_change_input
-
-    def did_mount(self):
-        self.runing = True
-        return super().did_mount()
-
-    def will_unmount(self):
-        self.runing = False
-        return super().will_unmount()
-
-    def on_change_input(self, e):
-        # print(f"uset input: {self.value}")
-        return
-        self.page.run_task(self.ai_sugguest_set)
-
-    async def ai_sugguest_set(self):
-        """已经废弃不可食用"""
-        await asyncio.sleep(0.3)
-        # if not self.runing:
-        #     return
-        # if not self.value:
-        #     self.suggestions = []
-        #     self.update()
-        #     return
-        # self.suggestions = AI_gen_sugguest_re(self.value)
-        # self.update()
+#     def handle_load(self):
+#         # print(f"{self.user_dir=}")
+#         try:
+#             if self.load_funx:
+#                 self.load_funx(self.user_dir)
+#         finally:
+#             self.ads.open = False
+#             self.page.update()
 
 
-class Decrement_Button(ft.Container):
-    """圆形按钮"""
+# class AI_Auto_input(ft.TextField):
+#     def __init__(self):
+#         super().__init__()
+#         self.border = ft.InputBorder.UNDERLINE
+#         self.expand = True
+#         self.on_change = self.on_change_input
 
-    def __init__(
-        self,
-        ball_size: int = 32,
-        WH: float = 0.0,
-        Start_Value=1,
-        Loop_Value=20,
-        bgcolor=DraculaColors.RED,
-        onClickOutside=None,
-        onLongPressOutside=None,
-    ):
-        super().__init__()
-        self.data = Start_Value
-        self.Start_Value = Start_Value
-        self.Loop_Value = Loop_Value
-        self.text = f"{self.data}"
-        self.ball_size = ball_size
-        self.content = ft.Text(
-            value=self.text,
-            color=DraculaColors.FOREGROUND,
-            size=self.ball_size * 0.45,
-            weight=ft.FontWeight.BOLD,
-        )
-        self.width = self.ball_size * WH if WH > 0 else self.ball_size
-        self.height = self.ball_size
-        self.bgcolor = bgcolor
-        self.border_radius = self.ball_size / 2
-        self.alignment = ft.Alignment.CENTER
-        self.shadow = ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=4,
-            color="#42000000",
-            offset=ft.Offset(0, 2),
-        )
-        self.onClickOutside_callback = onClickOutside
-        self.onLongPressOutside_callback = onLongPressOutside
-        self.on_click = self.handle_click
-        self.on_long_press = self.handle_long_press
+#     def did_mount(self):
+#         self.runing = True
+#         return super().did_mount()
 
-    def handle_click(self, e):
-        value = self.data
-        value += 1
-        if value > self.Loop_Value:
-            value = 1
-        self.data = value
-        self.content.value = f"{self.data}"
-        print(f"{self.data=} {self.content.value=}")
-        self.update()
-        if self.onClickOutside_callback:
-            self.onClickOutside_callback(e)
+#     def will_unmount(self):
+#         self.runing = False
+#         return super().will_unmount()
 
-    def handle_long_press(self, e):
-        value = self.data
-        value -= 2
-        if value < self.Start_Value:
-            value = self.Loop_Value
-        self.data = value
-        self.content.value = f"{self.data}"
-        print(f"{self.data=} {self.content.value=}")
-        self.update()
-        if self.onLongPressOutside_callback:
-            self.onLongPressOutside_callback(e)
+#     def on_change_input(self, e):
+#         # print(f"uset input: {self.value}")
+#         return
+#         self.page.run_task(self.ai_sugguest_set)
+
+#     async def ai_sugguest_set(self):
+#         """已经废弃不可食用"""
+#         await asyncio.sleep(0.3)
+#         # if not self.runing:
+#         #     return
+#         # if not self.value:
+#         #     self.suggestions = []
+#         #     self.update()
+#         #     return
+#         # self.suggestions = AI_gen_sugguest_re(self.value)
+#         # self.update()
 
 
-class select_fang(ft.Container):
-    def __init__(self, name: str = "1", size=32, on_select=None):
-        super().__init__()
-        self.block_size = size
-        self.content = ft.Text(str(name), size=self.block_size * 0.55)
-        self.width = self.block_size
-        self.height = self.block_size
-        self.border_radius = 5
-        self.alignment = ft.Alignment.CENTER
-        self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)  # 颜色切换动画
-        self.bgcolor = DraculaColors.CURRENT_LINE
-        self.on_click = self.handle_click
-        self.name = name
-        self.selected = False
-        self.on_select_callback = on_select
+# class Decrement_Button(ft.Container):
+#     """圆形按钮"""
 
-    def handle_click(self, e):
-        self.selected = not self.selected
-        self.bgcolor = (
-            DraculaColors.PURPLE if self.selected else DraculaColors.CURRENT_LINE
-        )
-        self.update()
+#     def __init__(
+#         self,
+#         ball_size: int = 32,
+#         WH: float = 0.0,
+#         Start_Value=1,
+#         Loop_Value=20,
+#         bgcolor=DraculaColors.RED,
+#         onClickOutside=None,
+#         onLongPressOutside=None,
+#     ):
+#         super().__init__()
+#         self.data = Start_Value
+#         self.Start_Value = Start_Value
+#         self.Loop_Value = Loop_Value
+#         self.text = f"{self.data}"
+#         self.ball_size = ball_size
+#         self.content = ft.Text(
+#             value=self.text,
+#             color=DraculaColors.FOREGROUND,
+#             size=self.ball_size * 0.45,
+#             weight=ft.FontWeight.BOLD,
+#         )
+#         self.width = self.ball_size * WH if WH > 0 else self.ball_size
+#         self.height = self.ball_size
+#         self.bgcolor = bgcolor
+#         self.border_radius = self.ball_size / 2
+#         self.alignment = ft.Alignment.CENTER
+#         self.shadow = ft.BoxShadow(
+#             spread_radius=1,
+#             blur_radius=4,
+#             color="#42000000",
+#             offset=ft.Offset(0, 2),
+#         )
+#         self.onClickOutside_callback = onClickOutside
+#         self.onLongPressOutside_callback = onLongPressOutside
+#         self.on_click = self.handle_click
+#         self.on_long_press = self.handle_long_press
 
-        if self.on_select_callback:
-            self.on_select_callback(e)
+#     def handle_click(self, e):
+#         value = self.data
+#         value += 1
+#         if value > self.Loop_Value:
+#             value = 1
+#         self.data = value
+#         self.content.value = f"{self.data}"
+#         print(f"{self.data=} {self.content.value=}")
+#         self.update()
+#         if self.onClickOutside_callback:
+#             self.onClickOutside_callback(e)
 
-
-class tary(ft.Row):
-    def __init__(self):
-        super().__init__()
-        self.command = ""
-        self.com_args = {0: 1, 1: 1}
-        self.opet_command = ""
-        self.opet_args = {0: 1, 1: 1}
-        self.weic_comd = ""
-        self.weic_args = []
-        self.gui_size_font = 10
-        self.showcommand = ft.Text(
-            value="wait...", color=DraculaColors.COMMENT, size=12
-        )
-        self.uc_haed = ft.CupertinoSlidingSegmentedButton(
-            thumb_color=DraculaColors.RED,
-            selected_index=0,
-            controls=[
-                ft.Text("null", size=self.gui_size_font),
-                ft.Text("bitX", size=self.gui_size_font),
-                ft.Text("bitX,Y", size=self.gui_size_font),
-                ft.Text("modX", size=self.gui_size_font),
-            ],
-            on_change=lambda _: self.uc_haed_change(),
-        )
-        self.uc_opet = ft.CupertinoSlidingSegmentedButton(
-            thumb_color=DraculaColors.RED,
-            selected_index=0,
-            controls=[
-                ft.Text(">", size=self.gui_size_font),
-                ft.Text("<", size=self.gui_size_font),
-                ft.Text("range", size=self.gui_size_font),
-            ],
-            on_change=lambda _: self.uc_opet_change(),
-        )
-        self.uc_weic = ft.CupertinoSlidingSegmentedButton(
-            thumb_color=DraculaColors.RED,
-            selected_index=0,
-            controls=[
-                ft.Text("#", size=self.gui_size_font),
-                ft.Text("Z", size=self.gui_size_font),
-                ft.Text("H", size=self.gui_size_font),
-                ft.Text("J", size=self.gui_size_font),
-                ft.Text("O", size=self.gui_size_font),
-                ft.Text("M3", size=self.gui_size_font),
-                ft.Text("W", size=self.gui_size_font),
-            ],
-            on_change=lambda _: self.uc_weic_change(),
-        )
-        self.uc_haed_row = ft.Row(
-            expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-        )
-        self.uc_opet_row = ft.Row(
-            expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-        )
-        self.uc_weic_row = ft.Row(
-            expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-        )
-        # she zhi
-        self.visible = False
-        self.controls = [
-            #
-            ft.Column(
-                spacing=5,
-                controls=[
-                    ft.Divider(),
-                    ft.Row(
-                        controls=[self.uc_haed],
-                        expand=True,
-                    ),
-                    self.uc_haed_row,
-                    ft.Row(
-                        controls=[self.uc_opet],
-                        expand=True,
-                    ),
-                    self.uc_opet_row,
-                    ft.Row(
-                        controls=[self.uc_weic],
-                        expand=True,
-                    ),
-                    self.uc_weic_row,
-                    ft.Row(
-                        controls=[self.showcommand],
-                        expand=True,
-                    ),
-                    ft.Divider(),
-                ],
-                expand=True,
-            ),
-        ]
-        # self.tight = True
-
-    def did_mount(self):
-        self.uc_haed_change()
-        self.uc_opet_change()
-        self.uc_weic_change()
-        return super().did_mount()
-
-    def buil_command(self):
-        """格式化命令行"""
-        command = ""
-        match self.command:
-            case "bitX":
-                command = f"bit{self.com_args[0]}"
-            case "bitX,Y":
-                command = f"bit{self.com_args[0]},{self.com_args[1]}"
-            case "modX":
-                command = f"mod{self.com_args[0]}"
-            case _:
-                pass
-
-        command_opet = ""
-        match self.opet_command:
-            case ">":
-                command_opet = f">{self.opet_args[0]}"
-            case "<":
-                command_opet = f"<{self.opet_args[0]}"
-            case "range":
-                command_opet = f"range {self.opet_args[0]},{self.opet_args[1]}"
-            case _:
-                pass
-
-        command_weic = ""
-        match self.weic_comd:
-            case "--z":
-                command_weic = "--z"
-            case "--h":
-                command_weic = "--h"
-            case "--j":
-                command_weic = "--j"
-            case "--o":
-                command_weic = "--o"
-            case "--m3":
-                if self.weic_args:
-                    command_weic = f"--m3{''.join(map(str, self.weic_args))}"
-
-            case "--w":
-                if self.weic_args:
-                    command_weic = f"--w{''.join(map(str, self.weic_args))}"
-
-            case _:
-                command_weic = ""
-
-        all_command = [command, command_opet, command_weic]
-        self.showcommand.value = " ".join(all_command)
-
-    def loop_number_click(self, e, command, com_args):
-        value = e.control.data
-        self.command = command
-        self.com_args[com_args] = value
-        self.buil_command()
-
-    def loop_number_long(self, e, command, com_args):
-        value = e.control.data
-        self.command = command
-        self.com_args[com_args] = value
-        self.buil_command()
-
-    def uc_haed_change(self):
-        select_index = self.uc_haed.selected_index
-        flg_text = self.uc_haed.controls[select_index].value
-        new_row = []
-        match flg_text:
-            case "null":
-                self.uc_haed_row.visible = False
-            case "bitX":
-                new_row = [
-                    ft.Text("bit"),
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e,
-                        c=f"bitX",
-                        ca=0: self.loop_number_click(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="bitX",
-                        ca=0: self.loop_number_long(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=20,
-                    ),
-                ]
-            case "bitX,Y":
-                new_row = [
-                    ft.Text("bit"),
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e,
-                        c=f"bitX,Y",
-                        ca=0: self.loop_number_click(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="bitX,Y",
-                        ca=0: self.loop_number_long(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=20,
-                    ),
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.COMMENT,
-                        onClickOutside=lambda e,
-                        c=f"bitX,Y",
-                        ca=1: self.loop_number_click(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="bitX,Y",
-                        ca=1: self.loop_number_long(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=20,
-                    ),
-                ]
-            case "modX":
-                new_row = [
-                    ft.Text("mod"),
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e,
-                        c=f"modX",
-                        ca=0: self.loop_number_click(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="modX",
-                        ca=0: self.loop_number_long(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=20,
-                    ),
-                ]
-        self.uc_haed_row.controls = new_row
-        self.uc_haed_row.visible = True
-        self.command = flg_text
-        self.buil_command()
-        self.update()
-
-    def select_opt_change(self, e, opet, i):
-        value = e.control.data
-        self.opet_command = opet
-        self.opet_args[i] = value
-        self.buil_command()
-        # print(f"select opt {e.control.value}")
-
-    def uc_opet_change(self):
-        select_index = self.uc_opet.selected_index
-        flg_text = self.uc_opet.controls[select_index].value
-        new_row = []
-        #! 在安卓系统下极其难用
-        match flg_text:
-            case ">":
-                new_row = [
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e, c=f">", ca=0: self.select_opt_change(
-                            e, c, ca
-                        ),
-                        onLongPressOutside=lambda e,
-                        c=">",
-                        ca=0: self.select_opt_change(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=160,
-                    ),
-                ]
-            case "<":
-                new_row = [
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e, c=f"<", ca=0: self.select_opt_change(
-                            e, c, ca
-                        ),
-                        onLongPressOutside=lambda e,
-                        c="<",
-                        ca=0: self.select_opt_change(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=160,
-                    ),
-                ]
-            case "range":
-                new_row = [
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.CURRENT_LINE,
-                        onClickOutside=lambda e,
-                        c=f"range",
-                        ca=0: self.select_opt_change(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="range",
-                        ca=0: self.select_opt_change(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=160,
-                    ),
-                    Decrement_Button(
-                        ball_size=25,
-                        WH=1.65,
-                        bgcolor=DraculaColors.COMMENT,
-                        onClickOutside=lambda e,
-                        c=f"range",
-                        ca=1: self.select_opt_change(e, c, ca),
-                        onLongPressOutside=lambda e,
-                        c="range",
-                        ca=1: self.select_opt_change(e, c, ca),
-                        Start_Value=1,
-                        Loop_Value=160,
-                    ),
-                ]
-        self.uc_opet_row.controls = new_row
-        self.uc_opet_row.visible = True
-        self.opet_command = flg_text
-        self.buil_command()
-        self.update()
-
-    def chip_select(self, e):
-        label_value = e.control.name
-        isSelect = e.control.selected
-        size = e.control.block_size
-        if isSelect:
-            if label_value not in self.weic_args:
-                self.weic_args.append(label_value)
-        else:
-            if label_value in self.weic_args:
-                self.weic_args.remove(label_value)
-        self.buil_command()
-        print(f"{label_value} is select {isSelect} {self.weic_args} {size=}")
-
-    def uc_weic_change(self):
-        select_index = self.uc_weic.selected_index
-        flg_text = self.uc_weic.controls[select_index].value
-        new_row = []
-        match flg_text:
-            case "Z":
-                self.weic_comd = "--z"
-            case "H":
-                self.weic_comd = "--h"
-            case "J":
-                self.weic_comd = "--j"
-            case "O":
-                self.weic_comd = "--o"
-            case "M3":
-                self.weic_comd = "--m3"
-                new_row = [
-                    select_fang(name=i, size=25, on_select=self.chip_select)
-                    for i in [0, 1, 2]
-                ]
-            case "W":
-                self.weic_comd = "--w"
-                new_row = [
-                    select_fang(name=i, size=20, on_select=self.chip_select)
-                    for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-                ]
-            case _:
-                self.weic_comd = ""
-        self.uc_weic_row.controls = new_row
-        self.uc_weic_row.visible = True
-        self.weic_args = []
-        self.buil_command()
-        self.update()
-        # print(f"run uc_weic_change done.")
+#     def handle_long_press(self, e):
+#         value = self.data
+#         value -= 2
+#         if value < self.Start_Value:
+#             value = self.Loop_Value
+#         self.data = value
+#         self.content.value = f"{self.data}"
+#         print(f"{self.data=} {self.content.value=}")
+#         self.update()
+#         if self.onLongPressOutside_callback:
+#             self.onLongPressOutside_callback(e)
 
 
-#
-#
-# New de kongjian
-#
-#
+# class select_fang(ft.Container):
+#     def __init__(self, name: str = "1", size=32, on_select=None):
+#         super().__init__()
+#         self.block_size = size
+#         self.content = ft.Text(str(name), size=self.block_size * 0.55)
+#         self.width = self.block_size
+#         self.height = self.block_size
+#         self.border_radius = 5
+#         self.alignment = ft.Alignment.CENTER
+#         self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)  # 颜色切换动画
+#         self.bgcolor = DraculaColors.CURRENT_LINE
+#         self.on_click = self.handle_click
+#         self.name = name
+#         self.selected = False
+#         self.on_select_callback = on_select
+
+#     def handle_click(self, e):
+#         self.selected = not self.selected
+#         self.bgcolor = (
+#             DraculaColors.PURPLE if self.selected else DraculaColors.CURRENT_LINE
+#         )
+#         self.update()
+
+#         if self.on_select_callback:
+#             self.on_select_callback(e)
+
+
+# class tary(ft.Row):
+#     def __init__(self):
+#         super().__init__()
+#         self.command = ""
+#         self.com_args = {0: 1, 1: 1}
+#         self.opet_command = ""
+#         self.opet_args = {0: 1, 1: 1}
+#         self.weic_comd = ""
+#         self.weic_args = []
+#         self.gui_size_font = 10
+#         self.showcommand = ft.Text(
+#             value="wait...", color=DraculaColors.COMMENT, size=12
+#         )
+#         self.uc_haed = ft.CupertinoSlidingSegmentedButton(
+#             thumb_color=DraculaColors.RED,
+#             selected_index=0,
+#             controls=[
+#                 ft.Text("null", size=self.gui_size_font),
+#                 ft.Text("bitX", size=self.gui_size_font),
+#                 ft.Text("bitX,Y", size=self.gui_size_font),
+#                 ft.Text("modX", size=self.gui_size_font),
+#             ],
+#             on_change=lambda _: self.uc_haed_change(),
+#         )
+#         self.uc_opet = ft.CupertinoSlidingSegmentedButton(
+#             thumb_color=DraculaColors.RED,
+#             selected_index=0,
+#             controls=[
+#                 ft.Text(">", size=self.gui_size_font),
+#                 ft.Text("<", size=self.gui_size_font),
+#                 ft.Text("range", size=self.gui_size_font),
+#             ],
+#             on_change=lambda _: self.uc_opet_change(),
+#         )
+#         self.uc_weic = ft.CupertinoSlidingSegmentedButton(
+#             thumb_color=DraculaColors.RED,
+#             selected_index=0,
+#             controls=[
+#                 ft.Text("#", size=self.gui_size_font),
+#                 ft.Text("Z", size=self.gui_size_font),
+#                 ft.Text("H", size=self.gui_size_font),
+#                 ft.Text("J", size=self.gui_size_font),
+#                 ft.Text("O", size=self.gui_size_font),
+#                 ft.Text("M3", size=self.gui_size_font),
+#                 ft.Text("W", size=self.gui_size_font),
+#             ],
+#             on_change=lambda _: self.uc_weic_change(),
+#         )
+#         self.uc_haed_row = ft.Row(
+#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
+#         )
+#         self.uc_opet_row = ft.Row(
+#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
+#         )
+#         self.uc_weic_row = ft.Row(
+#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
+#         )
+#         # she zhi
+#         self.visible = False
+#         self.controls = [
+#             #
+#             ft.Column(
+#                 spacing=5,
+#                 controls=[
+#                     ft.Divider(),
+#                     ft.Row(
+#                         controls=[self.uc_haed],
+#                         expand=True,
+#                     ),
+#                     self.uc_haed_row,
+#                     ft.Row(
+#                         controls=[self.uc_opet],
+#                         expand=True,
+#                     ),
+#                     self.uc_opet_row,
+#                     ft.Row(
+#                         controls=[self.uc_weic],
+#                         expand=True,
+#                     ),
+#                     self.uc_weic_row,
+#                     ft.Row(
+#                         controls=[self.showcommand],
+#                         expand=True,
+#                     ),
+#                     ft.Divider(),
+#                 ],
+#                 expand=True,
+#             ),
+#         ]
+#         # self.tight = True
+
+#     def did_mount(self):
+#         self.uc_haed_change()
+#         self.uc_opet_change()
+#         self.uc_weic_change()
+#         return super().did_mount()
+
+#     def buil_command(self):
+#         """格式化命令行"""
+#         command = ""
+#         match self.command:
+#             case "bitX":
+#                 command = f"bit{self.com_args[0]}"
+#             case "bitX,Y":
+#                 command = f"bit{self.com_args[0]},{self.com_args[1]}"
+#             case "modX":
+#                 command = f"mod{self.com_args[0]}"
+#             case _:
+#                 pass
+
+#         command_opet = ""
+#         match self.opet_command:
+#             case ">":
+#                 command_opet = f">{self.opet_args[0]}"
+#             case "<":
+#                 command_opet = f"<{self.opet_args[0]}"
+#             case "range":
+#                 command_opet = f"range {self.opet_args[0]},{self.opet_args[1]}"
+#             case _:
+#                 pass
+
+#         command_weic = ""
+#         match self.weic_comd:
+#             case "--z":
+#                 command_weic = "--z"
+#             case "--h":
+#                 command_weic = "--h"
+#             case "--j":
+#                 command_weic = "--j"
+#             case "--o":
+#                 command_weic = "--o"
+#             case "--m3":
+#                 if self.weic_args:
+#                     command_weic = f"--m3{''.join(map(str, self.weic_args))}"
+
+#             case "--w":
+#                 if self.weic_args:
+#                     command_weic = f"--w{''.join(map(str, self.weic_args))}"
+
+#             case _:
+#                 command_weic = ""
+
+#         all_command = [command, command_opet, command_weic]
+#         self.showcommand.value = " ".join(all_command)
+
+#     def loop_number_click(self, e, command, com_args):
+#         value = e.control.data
+#         self.command = command
+#         self.com_args[com_args] = value
+#         self.buil_command()
+
+#     def loop_number_long(self, e, command, com_args):
+#         value = e.control.data
+#         self.command = command
+#         self.com_args[com_args] = value
+#         self.buil_command()
+
+#     def uc_haed_change(self):
+#         select_index = self.uc_haed.selected_index
+#         flg_text = self.uc_haed.controls[select_index].value
+#         new_row = []
+#         match flg_text:
+#             case "null":
+#                 self.uc_haed_row.visible = False
+#             case "bitX":
+#                 new_row = [
+#                     ft.Text("bit"),
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e,
+#                         c=f"bitX",
+#                         ca=0: self.loop_number_click(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="bitX",
+#                         ca=0: self.loop_number_long(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=20,
+#                     ),
+#                 ]
+#             case "bitX,Y":
+#                 new_row = [
+#                     ft.Text("bit"),
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e,
+#                         c=f"bitX,Y",
+#                         ca=0: self.loop_number_click(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="bitX,Y",
+#                         ca=0: self.loop_number_long(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=20,
+#                     ),
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.COMMENT,
+#                         onClickOutside=lambda e,
+#                         c=f"bitX,Y",
+#                         ca=1: self.loop_number_click(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="bitX,Y",
+#                         ca=1: self.loop_number_long(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=20,
+#                     ),
+#                 ]
+#             case "modX":
+#                 new_row = [
+#                     ft.Text("mod"),
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e,
+#                         c=f"modX",
+#                         ca=0: self.loop_number_click(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="modX",
+#                         ca=0: self.loop_number_long(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=20,
+#                     ),
+#                 ]
+#         self.uc_haed_row.controls = new_row
+#         self.uc_haed_row.visible = True
+#         self.command = flg_text
+#         self.buil_command()
+#         self.update()
+
+#     def select_opt_change(self, e, opet, i):
+#         value = e.control.data
+#         self.opet_command = opet
+#         self.opet_args[i] = value
+#         self.buil_command()
+#         # print(f"select opt {e.control.value}")
+
+#     def uc_opet_change(self):
+#         select_index = self.uc_opet.selected_index
+#         flg_text = self.uc_opet.controls[select_index].value
+#         new_row = []
+#         #! 在安卓系统下极其难用
+#         match flg_text:
+#             case ">":
+#                 new_row = [
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e, c=f">", ca=0: self.select_opt_change(
+#                             e, c, ca
+#                         ),
+#                         onLongPressOutside=lambda e,
+#                         c=">",
+#                         ca=0: self.select_opt_change(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=160,
+#                     ),
+#                 ]
+#             case "<":
+#                 new_row = [
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e, c=f"<", ca=0: self.select_opt_change(
+#                             e, c, ca
+#                         ),
+#                         onLongPressOutside=lambda e,
+#                         c="<",
+#                         ca=0: self.select_opt_change(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=160,
+#                     ),
+#                 ]
+#             case "range":
+#                 new_row = [
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.CURRENT_LINE,
+#                         onClickOutside=lambda e,
+#                         c=f"range",
+#                         ca=0: self.select_opt_change(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="range",
+#                         ca=0: self.select_opt_change(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=160,
+#                     ),
+#                     Decrement_Button(
+#                         ball_size=25,
+#                         WH=1.65,
+#                         bgcolor=DraculaColors.COMMENT,
+#                         onClickOutside=lambda e,
+#                         c=f"range",
+#                         ca=1: self.select_opt_change(e, c, ca),
+#                         onLongPressOutside=lambda e,
+#                         c="range",
+#                         ca=1: self.select_opt_change(e, c, ca),
+#                         Start_Value=1,
+#                         Loop_Value=160,
+#                     ),
+#                 ]
+#         self.uc_opet_row.controls = new_row
+#         self.uc_opet_row.visible = True
+#         self.opet_command = flg_text
+#         self.buil_command()
+#         self.update()
+
+#     def chip_select(self, e):
+#         label_value = e.control.name
+#         isSelect = e.control.selected
+#         size = e.control.block_size
+#         if isSelect:
+#             if label_value not in self.weic_args:
+#                 self.weic_args.append(label_value)
+#         else:
+#             if label_value in self.weic_args:
+#                 self.weic_args.remove(label_value)
+#         self.buil_command()
+#         print(f"{label_value} is select {isSelect} {self.weic_args} {size=}")
+
+#     def uc_weic_change(self):
+#         select_index = self.uc_weic.selected_index
+#         flg_text = self.uc_weic.controls[select_index].value
+#         new_row = []
+#         match flg_text:
+#             case "Z":
+#                 self.weic_comd = "--z"
+#             case "H":
+#                 self.weic_comd = "--h"
+#             case "J":
+#                 self.weic_comd = "--j"
+#             case "O":
+#                 self.weic_comd = "--o"
+#             case "M3":
+#                 self.weic_comd = "--m3"
+#                 new_row = [
+#                     select_fang(name=i, size=25, on_select=self.chip_select)
+#                     for i in [0, 1, 2]
+#                 ]
+#             case "W":
+#                 self.weic_comd = "--w"
+#                 new_row = [
+#                     select_fang(name=i, size=20, on_select=self.chip_select)
+#                     for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+#                 ]
+#             case _:
+#                 self.weic_comd = ""
+#         self.uc_weic_row.controls = new_row
+#         self.uc_weic_row.visible = True
+#         self.weic_args = []
+#         self.buil_command()
+#         self.update()
+#         # print(f"run uc_weic_change done.")
+
+
+_ = r"""_|_|_|_|  _|  _|    _|                                    _|        _|              _|      
+_|            _|  _|_|_|_|    _|_|    _|  _|_|    _|_|_|  _|              _|_|_|  _|_|_|_|  
+_|_|_|    _|  _|    _|      _|_|_|_|  _|_|      _|_|      _|        _|  _|_|        _|      
+_|        _|  _|    _|      _|        _|            _|_|  _|        _|      _|_|    _|      
+_|        _|  _|      _|_|    _|_|_|  _|        _|_|_|    _|_|_|_|  _|  _|_|_|        _|_|  """
 
 
 class FiltersList(ft.Card):
@@ -616,15 +618,16 @@ class FiltersList(ft.Card):
         self.content = self.__build_card()
         self.editItemCallback = None
         self.add_closed_stat = None
-        self.filtersAll_change = "none"  # add none del save
+        self.filtersAll_change = "none"  # add none del edit
         self.filtersAll = []
+        self.filterSeed = set()
 
     def setting_edit_Callback(self, edit_item_callback=None):
         self.editItemCallback = edit_item_callback
-        
-    def setting_command_stat(self,add_closed_stat:None):
+
+    def setting_command_stat(self, add_closed_stat: None):
         self.add_closed_stat = add_closed_stat
-        
+
     def givefilterall(self):
         return self.filtersAll
 
@@ -644,12 +647,56 @@ class FiltersList(ft.Card):
             content=self.__command_button(),
         )
 
+    def targetspan(self, text: str):
+        split_wc = spiltfortarget(text)
+        spans = []
+        for ttext, color in split_wc:
+            spans.append(
+                ft.TextSpan(
+                    ttext,
+                    style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
+                )
+            )
+        return spans
+
+    def tokenspan(self, text: str):
+        segments = Tokenizer().Segment(text)
+        spans = []
+        for text, color in segments:
+            spans.append(
+                ft.TextSpan(
+                    text,
+                    style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
+                )
+            )
+        return spans
+
     def addFilter(self, scriptd: dict):
         _scd = scriptd.copy()
         if "" in _scd.values():
             print(f"add filter error {_scd}")
             return
         if not isinstance(self.content.content, ft.Row):
+            return
+
+        # hash 确认
+        def hashcode(scr: dict, cmd: str = "is"):
+            scr_obj = f"{scr['func']}{scr['target']}{scr['condition']}"
+            scr_hash = hashlib.sha256(scr_obj.encode("utf-8"))
+            match cmd.lower().strip():
+                case "is":
+                    if scr_hash.hexdigest() not in self.filterSeed:
+                        self.filterSeed.add(f"{scr_hash.hexdigest()}")
+                        return True
+                    else:
+                        return False
+                case "del":
+                    if scr_hash.hexdigest() in self.filterSeed:
+                        self.filterSeed.remove(scr_hash.hexdigest())
+                case _:
+                    pass
+
+        if hashcode(_scd, "is") == False:
             return
 
         controls = self.content.content.controls
@@ -659,6 +706,7 @@ class FiltersList(ft.Card):
                 return
             e_chip = e.control
             e_script = e.control.data
+            hashcode(e_script, "del")
             controls.remove(e_chip)
             self.filtersAll.remove(e_script)
             self.filtersAll_change = "del"
@@ -669,6 +717,7 @@ class FiltersList(ft.Card):
             e_chip = e.control
             e_script = e.control.data
             # print(f"edit {e_chip.data}")
+            hashcode(e_script, "del")
             controls.remove(e_chip)
             self.filtersAll.remove(e_script)
             if self.editItemCallback:
@@ -676,6 +725,7 @@ class FiltersList(ft.Card):
             if self.add_closed_stat:
                 self.add_closed_stat()
             e_chip.update()
+            self.filtersAll_change = "edit"
 
         self.filtersAll.append(_scd)
         controls.append(
@@ -684,23 +734,38 @@ class FiltersList(ft.Card):
                 label=ft.Column(
                     spacing=0,
                     controls=[
-                        ft.Text(f"use {_scd['func']} target {_scd['target']}"),
-                        ft.Text(f"{_scd['condition']}"),
+                        ft.Text(
+                            spans=self.targetspan(f"{_scd['func']} {_scd['target']}"),
+                            size=14,
+                        ),
+                        ft.Text(spans=self.tokenspan(f"{_scd['condition']}"), size=14),
                     ],
                 ),
-                leading=ft.Icon(ft.Icons.FILTER_ALT),
-                delete_icon_color=DraculaColors.RED,
+                # leading=ft.Icon(ft.Icons.FILTER_ALT),
+                label_padding=ft.Padding.only(left=3),
+                padding=3,
+                delete_icon=ft.Container(
+                    content=ft.Icon(
+                        ft.Icons.DELETE_FOREVER,
+                        color=DraculaColors.RED,
+                        size=20,
+                        margin=0,
+                    ),
+                    margin=ft.Margin.all(0),
+                    padding=0,
+                ),
+                # delete_icon_color=DraculaColors.RED,
                 on_delete=deleteForE,
                 on_click=editForE,
             )
         )
         self.filtersAll_change = "add"
         self.content.content.update()
-        self.page.run_task(self.filter_data_task)
-        
-    async def filter_data_task(self):
+        self.filter_data_task()
+
+    def filter_data_task(self):
         # self.page.session.store.set("filters", fiter_data)
-        await self.page.session.store.set("filters", self.filtersAll)
+        self.page.session.store.set("filters", self.filtersAll)
 
     def __command_button(self):
         """Add, Apply, Cancel"""
@@ -708,14 +773,61 @@ class FiltersList(ft.Card):
             wrap=True,
             controls=[
                 ft.Switch(
-                    label="auto save",
                     value=False,
+                    on_change=self.handle_switch,
+                    tooltip=ft.Tooltip(
+                        message="It saves automatically every 20 seconds."
+                    ),
                 ),
                 # "Various filter commands can be added to narrow down the massive pool of phone numbers."
             ],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.START,
         )
+
+    def handle_switch(self, e):
+        switch = e.control
+        if not isinstance(switch, ft.Switch):
+            return
+        if not switch.value:
+            switch.badge = None
+            return
+        self.page.run_task(self.auto_save, switch, 10)
+
+    async def auto_save(self, sw: ft.Switch, time: int = 10):
+        _time = time
+        while _time != 0:
+            await asyncio.sleep(2)
+            _time -= 1
+            sw.badge = f"{_time}"
+            if self.filtersAll:
+                self.page.run_task(self.saveTodict)
+            if _time == 0:
+                _time = time
+            if not sw.value:
+                sw.badge = None
+                break
+            sw.update()
+
+    async def saveTodict(self):
+        if self.filtersAll_change == "none":
+            return
+        self.page.session.store.set("filters", self.filtersAll)
+        filter_path = await ft.SharedPreferences().get("filter_path")
+        if self.page.web and not filter_path:
+            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
+        elif not filter_path:
+            user_dir_path = await ft.SharedPreferences().get("user_dir")
+            user_dir_path = user_dir_path if user_dir_path else app_data_path
+            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
+        try:
+            with open(filter_path, "w", encoding="utf-8") as f:
+                for item in self.filtersAll:
+                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+            print(f"saveTodict is run.")
+            self.filtersAll_change = "none"
+        except Exception as ex:
+            print(f'Auto Save error {ex}')
 
 
 class InputPad(ft.Card):
@@ -734,7 +846,7 @@ class InputPad(ft.Card):
 
     def will_unmount(self):
         self.running = False
-        
+
     def settingApplyCallback(self, applycallback=None):
         self.applycallback = applycallback
 
@@ -752,22 +864,27 @@ class InputPad(ft.Card):
             match item.data:
                 case "__load_funxtarget":
                     if not isinstance(item, ft.Row):
-                        return
+                        continue
                     if not isinstance(item.controls[0], ft.Text):
-                        return
+                        continue
                     text_spans = item.controls[0].spans
-                    text_spans[1].text = script['func']
-                    text_spans[3].text = script['target']
-                    self.pad_data['func'] = script['func']
-                    self.pad_data['target'] = script['target']
-
+                    text_spans[1].text = script["func"]
+                    text_spans[3].text = script["target"]
+                    self.pad_data["func"] = script["func"]
+                    self.pad_data["target"] = script["target"]
+                    self.pad_data["condition"] = script["condition"]
+                    # print(f"editPad {self.pad_data=} {text_spans[1].text=}")
                 case "__command_input":
                     if not isinstance(item, ft.TextField):
-                        return
+                        continue
                     item.value = script["condition"]
                 case "__apply_text":
                     # print('__apply_text.')
-                    pass
+                    if not isinstance(item, ft.Row):
+                        continue
+                    if not isinstance(item.controls[0], ft.Chip):
+                        continue
+                    item.controls[0].label = "Click to finish editing."
                 case _:
                     pass
         self.visible = True
@@ -805,24 +922,14 @@ class InputPad(ft.Card):
 
     def __apply_text(self):
         """Click "Apply" to add the filter."""
-        def_text_style = ft.TextStyle(size=14, color=DraculaColors.COMMENT)
-        fun_text_style = ft.TextStyle(size=14, color=DraculaColors.GREEN)
         return ft.Row(
             data="__apply_text",
             controls=[
-                ft.Text(
-                    spans=[
-                        ft.TextSpan(
-                            "Click ",
-                            style=def_text_style,
-                        ),
-                        ft.TextSpan(
-                            "'Apply'",
-                            style=fun_text_style,
-                            on_click=self.handle_apply_click,
-                        ),
-                        ft.TextSpan(" to add the filter.", style=def_text_style),
-                    ]
+                ft.Chip(
+                    label="Click to add a filter.",
+                    label_text_style=ft.TextStyle(color=DraculaColors.BACKGROUND),
+                    bgcolor=DraculaColors.GREEN,
+                    on_click=self.handle_apply_click,
                 ),
             ],
         )
@@ -831,7 +938,7 @@ class InputPad(ft.Card):
         def input_change(e):
             if not isinstance(e.control, ft.TextField):
                 return
-            self.pad_data["condition"] = f"{e.control.value}"
+            self.pad_data["condition"] = f"{e.control.value}".strip()
 
         return ft.TextField(
             data="__command_input",
@@ -877,15 +984,21 @@ class InputPad(ft.Card):
             data="__load_FT_show",
             controls=[],
             wrap=True,
+            spacing=2,
+            run_spacing=2,
             visible=False,
         )
 
     def handle_apply_click(self, e):
         if "" in self.pad_data.values():
             return
+        if not isinstance(e.control, ft.Chip):
+            return
+        e.control.label = "Click to add a filter."
         # print(f'handle_apply_click {self.pad_data=}')
         if self.applycallback:
             self.applycallback(scriptd=self.pad_data)
+        e.control.update()
 
     def handle_func_click(self, e):
         def function_click(k):
@@ -893,7 +1006,7 @@ class InputPad(ft.Card):
                 e.control.text = f"{k}"
                 e.control.data = k
                 self.__FT_show.visible = False
-                self.pad_data["func"] = k
+                self.pad_data["func"] = f"{k}".strip()
 
         if self.funcs_dc.__len__() == 0:
             self.funcs_dc = dict(sorted(filterFunc.getFuncName().items()))
@@ -918,7 +1031,7 @@ class InputPad(ft.Card):
                 e.control.text = f"{k}"
                 e.control.data = k
                 self.__FT_show.visible = False
-                self.pad_data["target"] = k
+                self.pad_data["target"] = f"{k}".strip()
 
         try:
             global jackpot_seting
@@ -954,7 +1067,7 @@ class CommandList(ft.Card):
         super().__init__()
         self.content = self.__build_card()
         self.addcallback = None
-        self.filterAddItem  = None
+        self.filterAddItem = None
         self.give_data = None
         self.automatically_save = False
 
@@ -963,8 +1076,8 @@ class CommandList(ft.Card):
 
     def will_unmount(self):
         self.running = False
-        
-    def setting_give_data(self, give_data:None):
+
+    def setting_give_data(self, give_data: None):
         self.give_data = give_data
 
     def __build_card(self):
@@ -983,7 +1096,7 @@ class CommandList(ft.Card):
             controls=[
                 ft.TextButton(
                     expand=1,
-                    key='add_close',
+                    key="add_close",
                     icon=ft.Icons.FILTER,
                     content="Add",
                     on_click=self.handle_add,
@@ -1004,7 +1117,7 @@ class CommandList(ft.Card):
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
-        
+
     def setting_edit_stat_open(self):
         # e.control.content = "Add"
         # e.control.icon = ft.Icons.FILTER
@@ -1015,10 +1128,10 @@ class CommandList(ft.Card):
             return
         add_close.content = "Closed"
         add_close.icon = ft.Icons.CLOSE
-    
+
     def setting_add_callback(self, addCallBack=None):
         self.addcallback = addCallBack
-        
+
     def setting_filte_add_item(self, filterAddItem=None):
         self.filterAddItem = filterAddItem
 
@@ -1038,39 +1151,106 @@ class CommandList(ft.Card):
                     e.control.icon = ft.Icons.FILTER
                 e.control.update()
 
-    async def handle_Save(self):
+    async def handle_Save(self, e):
         if not self.give_data:
             return
         fiter_data = self.give_data()
         if not fiter_data:
             return
         self.page.session.store.set("filters", fiter_data)
-        temp = await self.page.shared_preferences.get("user_dir")
-        if self.page.web:
-            temp = app_data_path
-        jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
-        with open(jackpot_filters, "w", encoding="utf-8") as f:
-            for item in fiter_data:
-                f.write(json.dumps(item, ensure_ascii=False) + "\n")
-                
-    async def handle_Open(self):
-        temp = await self.page.shared_preferences.get("user_dir")
-        if self.page.web:
-            temp = app_data_path
-        jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
-        fiter_data = []
-        with open(jackpot_filters, "r", encoding="utf-8") as f:
-            for line in f:
-                # 去掉行尾换行符并确保行不为空
-                line = line.strip()
-                if line:
-                    # 将每一行的 JSON 字符串转回字典对象
-                    item = json.loads(line)
-                    fiter_data.append(item)
-                    if self.filterAddItem:
-                        self.filterAddItem(item)
-        self.page.session.store.set("filters", fiter_data)
-        
+        filter_path = await ft.SharedPreferences().get("filter_path")
+        if self.page.web and not filter_path:
+            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
+            print(f"web mode {filter_path}")
+        elif not filter_path:
+            user_dir_path = await ft.SharedPreferences().get("user_dir")
+            user_dir_path = user_dir_path if user_dir_path else app_data_path
+            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
+            print(f"window linux ios android {filter_path}")
+        try:
+            with open(filter_path, "w", encoding="utf-8") as f:
+                for item in fiter_data:
+                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        except Exception as ex:
+            print(f"Default write error, insufficient permissions. {ex}")
+            json_lines = "\n".join(
+                [json.dumps(item, ensure_ascii=False) for item in fiter_data]
+            )
+            content_bytes = json_lines.encode("utf-8")
+            save_path = await ft.FilePicker().save_file(
+                dialog_title="Select the directory to store the jackpot_filters.dict file.",
+                allowed_extensions=["dict"],
+                file_name="jackpot_filters.dict",
+                initial_directory=await ft.SharedPreferences().get("user_dir"),
+                src_bytes=content_bytes,
+            )
+            if save_path:
+                await ft.SharedPreferences().set("filter_path", save_path)
+                print(f"Filter saved successfully. {save_path}")
+
+    async def handle_Open(self, e):
+        filter_path = await ft.SharedPreferences().get("filter_path")
+        if self.page.web and not filter_path:
+            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
+            print(f"web mode {filter_path}")
+        elif not filter_path:
+            user_dir_path = await ft.SharedPreferences().get("user_dir")
+            user_dir_path = user_dir_path if user_dir_path else app_data_path
+            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
+            print(f"window linux ios android {filter_path}")
+
+        try:
+            fiter_data = []
+            with open(filter_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    # 去掉行尾换行符并确保行不为空
+                    line = line.strip()
+                    if line:
+                        # 将每一行的 JSON 字符串转回字典对象
+                        item = json.loads(line)
+                        fiter_data.append(item)
+                        if self.filterAddItem:
+                            self.filterAddItem(item)
+            self.page.session.store.set("filters", fiter_data)
+        except Exception as ex:
+            print(f"Default read error, insufficient permissions. {ex}")
+            select_files = await ft.FilePicker().pick_files(
+                dialog_title="Select the directory to store the jackpot_filters.dict file.",
+                allowed_extensions=["dict"],
+                allow_multiple=False,
+                initial_directory=await ft.SharedPreferences().get("user_dir"),
+            )
+            if select_files:
+                newPath = select_files[0].path
+                fiter_data = []
+                with open(newPath, "r", encoding="utf-8") as f:
+                    for line in f:
+                        # 去掉行尾换行符并确保行不为空
+                        line = line.strip()
+                        if line:
+                            # 将每一行的 JSON 字符串转回字典对象
+                            item = json.loads(line)
+                            fiter_data.append(item)
+                            if self.filterAddItem:
+                                self.filterAddItem(item)
+                self.page.session.store.set("filters", fiter_data)
+                await ft.SharedPreferences().set("filter_path", newPath)
+                print(f"Reading complete. {len(fiter_data)}")
+        # old code
+        # if temp:
+        #     jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
+        #     fiter_data = []
+        #     with open(jackpot_filters, "r", encoding="utf-8") as f:
+        #         for line in f:
+        #             # 去掉行尾换行符并确保行不为空
+        #             line = line.strip()
+        #             if line:
+        #                 # 将每一行的 JSON 字符串转回字典对象
+        #                 item = json.loads(line)
+        #                 fiter_data.append(item)
+        #                 if self.filterAddItem:
+        #                     self.filterAddItem(item)
+        #     self.page.session.store.set("filters", fiter_data)
 
 
 #
@@ -1088,275 +1268,25 @@ class FilterPage:
         self.Filters_cmd_list = FiltersList()
         self.Input_Pad = InputPad()
         self.Command_List = CommandList()
-        
-        self.Input_Pad.settingApplyCallback(applycallback=self.Filters_cmd_list.addFilter)
+
+        self.Input_Pad.settingApplyCallback(
+            applycallback=self.Filters_cmd_list.addFilter
+        )
         self.Command_List.setting_add_callback(addCallBack=self.Input_Pad.openPad)
-        self.Command_List.setting_give_data(give_data=self.Filters_cmd_list.givefilterall)
-        self.Command_List.setting_filte_add_item(filterAddItem=self.Filters_cmd_list.addFilter)
+        self.Command_List.setting_give_data(
+            give_data=self.Filters_cmd_list.givefilterall
+        )
+        self.Command_List.setting_filte_add_item(
+            filterAddItem=self.Filters_cmd_list.addFilter
+        )
         self.Filters_cmd_list.setting_edit_Callback(self.Input_Pad.editePad)
-        self.Filters_cmd_list.setting_command_stat(add_closed_stat=self.Command_List.setting_edit_stat_open)
+        self.Filters_cmd_list.setting_command_stat(
+            add_closed_stat=self.Command_List.setting_edit_stat_open
+        )
         # ? new control
-        # self.filters_list = []
-        # self.editing_index = -1
-        # self.last_selected_target = None
-        # self.filter_items_column = ft.Column(spacing=2)
-        # # --- 1. 定义 Target 下拉列表 ---
-        # self.pop_func = ft.PopupMenuButton(
-        #     content=ft.Text(value="func", color=DraculaColors.GREEN, weight="bold"),
-        # )
-        # self.Fab = ft.FloatingActionButton(
-        #     icon=ft.Icons.FILTER_LIST,
-        #     bgcolor=DraculaColors.PINK,
-        #     on_click=lambda _: self.open_dialog(-1),
-        #     # opacity=0.65,
-        # )
-        # self.pop_target = ft.PopupMenuButton(
-        #     content=ft.Text(value="all", color=DraculaColors.COMMENT, weight="bold"),
-        # )
-        # self.tary_row = tary()
-        # self.condition_input = AI_Auto_input()
-        # self.input_row = ft.Row(
-        #     controls=[
-        #         self.condition_input,
-        #     ],
-        #     align=ft.Alignment.CENTER_LEFT,
-        #     tight=True,
-        # )
-        # self.dlg = self.get_dlg()
         self.view = self.get_filter_view()
 
-    # def close_dlg(self, e):
-    #     self.dlg.open = False
-    #     self.page.update()
-
-    # def tary_change(self, e):
-    #     self.page.session.store.set("tary", e.data)
-    #     self.tary_row.visible = e.data
-    #     self.condition_input.disabled = e.data
-    #     self.condition_input.visible = not e.data
-
-    # def get_dlg(self):
-    #     tary_value = self.page.session.store.get("tary") or False
-    #     dlg = ft.AlertDialog(
-    #         title=ft.Text("Filter Settings", color=DraculaColors.COMMENT),
-    #         content=ft.Container(
-    #             content=ft.Column(
-    #                 controls=[
-    #                     ft.Row(
-    #                         controls=[
-    #                             ft.Text("Select Fun:"),
-    #                             self.pop_func,
-    #                             ft.Text("Target:"),
-    #                             self.pop_target,
-    #                         ],
-    #                         tight=True,
-    #                     ),
-    #                     ft.Row(
-    #                         controls=[
-    #                             ft.Text(
-    #                                 "Conditions:", size=12, color=DraculaColors.COMMENT
-    #                             ),
-    #                             ft.Switch(
-    #                                 value=tary_value,
-    #                                 height=25,
-    #                                 on_change=self.tary_change,
-    #                             ),
-    #                         ],
-    #                         align=ft.Alignment.CENTER_LEFT,
-    #                         tight=True,
-    #                     ),
-    #                     self.tary_row,
-    #                     self.input_row,
-    #                 ],
-    #                 tight=True,
-    #             ),
-    #             width=350,
-    #         ),
-    #         actions=[
-    #             ft.TextButton("Cancel", on_click=self.close_dlg),
-    #             ft.Button(
-    #                 "Apply",
-    #                 bgcolor=DraculaColors.RED,
-    #                 color=DraculaColors.FOREGROUND,
-    #                 on_click=self.handle_apply,
-    #             ),
-    #         ],
-    #     )
-    #     return dlg
-
-    # def handle_func_click(self, name: str):
-    #     self.pop_func.content.value = name
-
-    # def handle_target_click(self, name: str):
-    #     self.pop_target.content.value = name
-
-    # def handle_apply(self, e):
-    #     tary_value = self.page.session.store.get("tary") or False
-    #     _func = self.pop_func.content.value
-    #     _target = self.pop_target.content.value or "all"
-    #     _condit = (
-    #         self.condition_input.value
-    #         if not tary_value
-    #         else self.tary_row.showcommand.value
-    #     )
-    #     if _func == "func" or _condit == "":
-    #         return
-
-    #     # 保存本次的选择，以便下次 Add 时默认选中
-    #     self.last_selected_target = _target
-
-    #     new_data = {
-    #         "func": _func,
-    #         "target": _target,
-    #         "condition": _condit,
-    #     }
-
-    #     if self.editing_index == -1:
-    #         self.filters_list.append(new_data)
-    #     else:
-    #         self.filters_list[self.editing_index] = new_data
-
-    #     self.dlg.open = False
-    #     self.render_filters()
-    #     self.page.session.store.set("filters", self.filters_list)
-    #     self.page.update()
-
-    # def open_dialog(self, index=-1):
-    #     self.editing_index = index
-    #     available_tags = self.refresh_target_options()
-    #     available_func = self.refresh_func_options()
-
-    #     if index == -1:
-    #         # --- 新增模式 (Add Filter) ---
-    #         # 优先级 1: 如果有上一次记录的选择，且该选择目前依然在启用列表中，则继续使用它
-    #         if self.last_selected_target in available_tags:
-    #             self.pop_target.content.value = self.last_selected_target
-    #         # 优先级 2: 否则，如果列表不为空，默认选择第一项
-    #         elif available_tags:
-    #             self.pop_target.content.value = available_tags[0]
-    #         else:
-    #             self.pop_target.content.value = "all"
-
-    #         self.condition_input.value = ""  # 新增时清空输入框
-    #     else:
-    #         # --- 编辑模式 (Long Press) ---
-    #         item = self.filters_list[index]
-    #         # 确保保存的值还在当前启用列表中，否则下拉框会显示空白
-    #         self.pop_target.content.value = (
-    #             item["target"] if item["target"] in available_tags else None
-    #         )
-    #         self.pop_func.content.value = (
-    #             item["func"] if item["func"] in available_func else None
-    #         )
-    #         self.condition_input.value = item["condition"]
-
-    #     self.dlg.open = True
-    #     self.page.update()
-
-    # def render_filters(self):
-    #     token = Tokenizer()
-
-    #     def tokenspan(text: str):
-    #         segments = token.Segment(text)
-    #         spans = [
-    #             ft.TextSpan("Condition: ", style=ft.TextStyle(color=ft.Colors.WHITE))
-    #         ]
-    #         for text, color in segments:
-    #             spans.append(
-    #                 ft.TextSpan(
-    #                     text,
-    #                     style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
-    #                 )
-    #             )
-    #         return spans
-
-    #     def targetspan(text: str):
-    #         split_wc = spiltfortarget(text)
-    #         spans = []
-    #         for ttext, color in split_wc:
-    #             spans.append(
-    #                 ft.TextSpan(
-    #                     ttext,
-    #                     style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
-    #                 )
-    #             )
-    #         return spans
-
-    #     self.filter_items_column.controls.clear()
-    #     for idx, item in enumerate(self.filters_list):
-    #         self.filter_items_column.controls.append(
-    #             ft.Dismissible(
-    #                 content=ft.ListTile(
-    #                     leading=ft.Icon(
-    #                         ft.Icons.FILTER_LIST, color=DraculaColors.ORANGE
-    #                     ),
-    #                     title=ft.Text(
-    #                         spans=targetspan(
-    #                             f"Target: {item['target']} Func: {item['func']}"
-    #                         ),
-    #                         # color=DraculaColors.ORANGE,
-    #                     ),
-    #                     #! 添加文字渲染器
-    #                     subtitle=ft.Text(spans=tokenspan(item["condition"])),
-    #                     # subtitle=ft.Text(
-    #                     #     f"Condition: {item['condition']}",
-    #                     #     color=DraculaColors.PURPLE,
-    #                     # ),
-    #                     # bgcolor=DraculaColors.CURRENT_LINE,
-    #                     on_long_press=lambda _, i=idx: self.open_dialog(i),
-    #                 ),
-    #                 on_dismiss=lambda _, i=idx: self.remove_filter(i),
-    #                 dismiss_direction=ft.DismissDirection.START_TO_END,
-    #                 background=ft.Container(
-    #                     bgcolor=DraculaColors.RED,
-    #                     content=ft.Text(
-    #                         "Delete", color=DraculaColors.FOREGROUND, weight="bold"
-    #                     ),
-    #                     alignment=ft.Alignment.CENTER_LEFT,
-    #                     padding=20,
-    #                     border_radius=5,
-    #                 ),
-    #             )
-    #         )
-
-    # def remove_filter(self, index):
-    #     self.filters_list.pop(index)
-    #     self.render_filters()
-    #     self.page.session.store.set("filters", self.filters_list)
-    #     self.page.update()
-
-    # def save_file(self, user_dirs: str):
-    #     file_path = os.path.join(user_dirs, "jackpot_filters.dict")
-    #     with open(file_path, "w", encoding="utf-8") as f:
-    #         for item in self.filters_list:
-    #             f.write(json.dumps(item, ensure_ascii=False) + "\n")
-    #     self.page.show_dialog(get_snack_bar(f"{file_path} saved successfully."))
-
-    # def load_file(self, user_dirs: str):
-    #     file_path = os.path.join(user_dirs, "jackpot_filters.dict")
-    #     if not os.path.isfile(file_path):
-    #         return
-    #     filters_list = []
-    #     with open(file_path, "r", encoding="utf-8") as f:
-    #         for line in f:
-    #             # 去掉行尾换行符并确保行不为空
-    #             line = line.strip()
-    #             if line:
-    #                 # 将每一行的 JSON 字符串转回字典对象
-    #                 item = json.loads(line)
-    #                 filters_list.append(item)
-    #     if not filters_list:
-    #         return
-    #     self.filters_list = filters_list
-    #     self.page.session.store.set("filters", self.filters_list)
-    #     self.render_filters()
-    #     self.page.update()
-
     def get_filter_view(self):
-        # self.page.overlay.append(self.dlg)
-        # user_dict_button = UserdirButton()
-        # user_dict_button.setting(self.save_file, self.load_file)
-
         return ft.Column(
             controls=[
                 ft.Image(

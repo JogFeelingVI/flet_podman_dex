@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-04 02:53:12
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-14 05:47:32
+# @Last Modified time: 2026-01-23 13:50:38
 
 
 import secrets
@@ -10,6 +10,7 @@ import itertools
 import re
 import inspect
 from typing import TypedDict, List, get_type_hints
+from collections import OrderedDict
 
 
 class LotteryData(TypedDict, total=False):
@@ -70,15 +71,33 @@ class randomData:
         """获取格式化的随机数据字符串表示"""
         if abc is None:
             pabc = self.get_pabc()
+            # print(f'{pabc=}')
         else:
             pabc = abc
-        exp_parts = []
+        parts = []
         for key in self.targets:
+            item_config = self.setting.get(key)
             numbers = pabc.get(key)
-            if numbers is not None:
-                numbers_str = [f"{x:02}" for x in numbers]
-                exp_parts.append(" ".join(numbers_str))
-        return " + ".join(exp_parts)
+
+            width = max(len(f"{item_config['range_end']}"), 1)
+            numbers_str = [f"{x:0{width}}" for x in numbers]
+            # print(f'{numbers=} {numbers_str=}')
+            parts.append(" ".join(numbers_str))
+        groups = OrderedDict()
+        for p in parts:
+            i = len(p)
+            groups.setdefault(i, []).append(p)
+        result_lists = list(groups.values())
+        # print(f'{result_lists=}')
+        match len(result_lists):
+            case 1:
+                return " ".join(result_lists[0])
+            case 2:
+                part_1 = " ".join(result_lists[0])
+                part_2 = " ".join(result_lists[1])
+                return f"{part_1} + {part_2}"
+            case _:
+                return " ".join([" ".join(g) for g in result_lists])
 
     @staticmethod
     def generate_secure_string(length=8):
@@ -345,9 +364,9 @@ class filterFunc:
     @staticmethod
     def Sum(pabc: LotteryData, args: str, target: str) -> bool:
         if target == "all":
-            target = list(pabc.keys())[0]
-
-        sumValue = sum(pabc[target])
+            sumValue = sum([y for x in pabc.values() for y in x])
+        else:
+            sumValue = sum(pabc[target])
         Number_for_args = CalcUtils.nwped(args)
         if sumValue in Number_for_args:
             return True
@@ -355,9 +374,11 @@ class filterFunc:
 
     @staticmethod
     def include(pabc: LotteryData, args: str, target: str) -> bool:
+        targetValue = []
         if target == "all":
-            target = list(pabc.keys())[0]
-        targetValue = set(pabc[target])
+            targetValue = [y for x in pabc.values() for y in x]
+        else:
+            targetValue = set(pabc[target])
         Number_for_args = set(CalcUtils.nwped(args))
 
         if targetValue & Number_for_args:
@@ -370,16 +391,21 @@ class filterFunc:
 
     @staticmethod
     def bit(pabc: LotteryData, args: str, target: str) -> bool:
-        pattern = r"bit(\d+)\s+(.*)"
-        match = re.search(pattern, args)
         if target == "all":
             target = list(pabc.keys())[0]
-        if not match:
-            return False
+        pabctarget = pabc[target]
+        if len(pabctarget) == 1:
+            bitValue = pabctarget[0]
+            other_part = args
+        else:
+            pattern = r"bit(\d+)\s+(.*)"
+            match = re.search(pattern, args)
+            if not match:
+                return False
+            idx_y = int(match.group(1))  # '2'
+            other_part = match.group(2)  # '>13 --z'
+            bitValue = pabc[target][idx_y - 1]
 
-        idx_y = int(match.group(1))  # '2'
-        other_part = match.group(2)  # '>13 --z'
-        bitValue = pabc[target][idx_y - 1]
         Number_for_args = CalcUtils.nwped(other_part)
         if bitValue in Number_for_args:
             return True
@@ -393,7 +419,11 @@ class filterFunc:
     def Ac(pabc: LotteryData, args: str, target: str) -> bool:
         acValue = []
         if target == "all":
-            target = list(pabc.keys())[0]
+            acValue = [y for x in pabc.values() for y in x]
+        else:
+            acValue = pabc[target]
+            if len(acValue) == 1:
+                return False
         acValue = CalcUtils.ac(pabc[target])
 
         Number_for_args = CalcUtils.nwped(args)
@@ -411,13 +441,17 @@ class filterFunc:
 
         # 2. 修正字典键的获取
         if target == "all":
-            target = list(pabc.keys())[0]
+            sum_bit = [y for x in pabc.values() for y in x]
+        else:
+            sum_bit = pabc[target]
+            if len(sum_bit) == 1:
+                return False
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))  # '1'
         idx_y = int(match.group(2))  # '2'
         other_part = match.group(3)  # '>13 --z'
-        bitx = pabc[target][idx_x - 1]
-        bity = pabc[target][idx_y - 1]
+        bitx = sum_bit[idx_x - 1]
+        bity = sum_bit[idx_y - 1]
         Number_for_args = CalcUtils.nwped(other_part)
         if (bitx + bity) in Number_for_args:
             return True
@@ -434,7 +468,11 @@ class filterFunc:
 
         # 2. 修正字典键的获取
         if target == "all":
-            target = list(pabc.keys())[0]
+            diff_bit = [y for x in pabc.values() for y in x]
+        else:
+            diff_bit = pabc[target]
+            if len(diff_bit) == 1:
+                return False
 
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))  # '1'
@@ -442,8 +480,8 @@ class filterFunc:
         other_part = match.group(3)  # '>13 --z'
 
         # 4. 获取具体号码（注意索引要 -1）
-        val_x = pabc[target][idx_x - 1]
-        val_y = pabc[target][idx_y - 1]
+        val_x = diff_bit[idx_x - 1]
+        val_y = diff_bit[idx_y - 1]
 
         # 5. 计算逻辑
         diff_value = abs(val_x - val_y)
@@ -462,13 +500,14 @@ class filterFunc:
         match = re.search(pattern, args)
 
         if target == "all":
-            target = list(pabc.keys())[0]
-
+            mod_list = [y for x in pabc.values() for y in x]
+        else:
+            mod_list = pabc[target]
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))
         other_part = match.group(2)
 
-        modx_sum = sum([x % idx_x for x in pabc[target]])
+        modx_sum = sum([x % idx_x for x in mod_list])
         Number_for_args = CalcUtils.nwped(other_part)
         if modx_sum in Number_for_args:
             return True
@@ -480,7 +519,7 @@ class filterFunc:
             # 将 keys 转为 list 后再取第一个
             pabcvalue = [y for x in pabc.values() for y in x]
         else:
-            pabcvalue = [x for x in pabc[target]]
+            pabcvalue = pabc[target]
         Number_for_args = CalcUtils.nwped(args)
         if set(pabcvalue) & set(Number_for_args):
             return True
@@ -495,8 +534,10 @@ class filterFunc:
     @staticmethod
     def jiSum(pabc: LotteryData, args: str, target: str):
         if target == "all":
-            target = list(pabc.keys())[0]
-        jiList = [x for x in pabc[target] if x % 2 == 1]
+            jishu = [y for x in pabc.values() for y in x]
+        else:
+            jishu = pabc[target]
+        jiList = [x for x in jishu if x % 2 == 1]
         Number_for_args = CalcUtils.nwped(args)
         if sum(jiList) in Number_for_args:
             return True
@@ -505,8 +546,10 @@ class filterFunc:
     @staticmethod
     def ouSum(pabc: LotteryData, args: str, target: str):
         if target == "all":
-            target = list(pabc.keys())[0]
-        ouList = [x for x in pabc[target] if x % 2 == 0]
+            oushu = [y for x in pabc.values() for y in x]
+        else:
+            oushu = pabc[target]
+        ouList = [x for x in oushu if x % 2 == 0]
         Number_for_args = CalcUtils.nwped(args)
         if sum(ouList) in Number_for_args:
             return True
@@ -515,11 +558,11 @@ class filterFunc:
     @staticmethod
     def zsSum(pabc: LotteryData, args: str, target: str):
         if target == "all":
-            target = list(pabc.keys())[0]
-
-        zsList = pabc[target]
-        zs = CalcUtils.zs(max(zsList))
-        zsList = [x for x in zsList if x in zs]
+            zhishu = [y for x in pabc.values() for y in x]
+        else:
+            zhishu = pabc[target]
+        zs = CalcUtils.zs(max(zhishu))
+        zsList = [x for x in zhishu if x in zs]
         Number_for_args = CalcUtils.nwped(args)
         if sum(zsList) in Number_for_args:
             return True
@@ -528,11 +571,11 @@ class filterFunc:
     @staticmethod
     def hsSum(pabc: LotteryData, args: str, target: str):
         if target == "all":
-            target = list(pabc.keys())[0]
-
-        zsList = pabc[target]
-        zs = CalcUtils.zs(max(zsList))
-        hsList = [x for x in zsList if x not in zs]
+            heshu = [y for x in pabc.values() for y in x]
+        else:
+            heshu = pabc[target]
+        zs = CalcUtils.zs(max(heshu))
+        hsList = [x for x in heshu if x not in zs]
         Number_for_args = CalcUtils.nwped(args)
         if sum(hsList) in Number_for_args:
             return True

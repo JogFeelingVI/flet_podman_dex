@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-15 06:10:20
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-16 23:43:36
+# @Last Modified time: 2026-01-23 13:29:32
 
 from .DraculaTheme import DraculaColors
 from .lotteryballs import LotteryBalls
@@ -55,11 +55,11 @@ class dism(ft.Dismissible):
             self.MarkData("handle_confirm_dismiss")
         elif e.direction == ft.DismissDirection.START_TO_END:
             # save data
-            raw_json = await self.page.shared_preferences.get("save_data_list")
+            raw_json = await ft.SharedPreferences().get("save_data_list")
             save_list = json.loads(raw_json) if raw_json else []
             if e.control.data not in set(save_list):
                 save_list.append(e.control.data)
-                await self.page.shared_preferences.set(
+                await ft.SharedPreferences().set(
                     "save_data_list", json.dumps(save_list)
                 )
 
