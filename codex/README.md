@@ -36,3 +36,8 @@ uv pip compile requirements.in -o requirements.txt
 ```bash
 uv pip sync requirements.txt
 ```
+
+#### jks文件编码
+```bash
+base64 -i lotter.jks | tr -d '\n'
+```

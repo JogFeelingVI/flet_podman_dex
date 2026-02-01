@@ -2,20 +2,23 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-26 14:46:02
+# @Last Modified time: 2026-02-01 04:41:51
 
 from .DraculaTheme import DraculaColors
 from .jackpot_core import randomData
+from .loger import logr
 import flet as ft
 import json
 import os
 import re
 import asyncio
+import pathlib
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
+# region Lotter_Data
 Lotter_Data = {
     "🔴双色球": {
         "description": "🇨🇳百万富翁缔造者",
@@ -82,7 +85,11 @@ Lotter_Data = {
     },
 }
 
+logr.info(f"{Lotter_Data.keys()}")
+# endregion
 
+
+# region input_user_rule
 class input_user_rule(ft.Card):
     def __init__(self):
         super().__init__()
@@ -202,7 +209,9 @@ class input_user_rule(ft.Card):
         rows = self.content.content.controls
         for _item in rows:
             if isinstance(_item, ft.TextField):
-                temp["randomData"]["note"] = _item.value or "Jackptot lotter apk"
+                temp["randomData"]["note"] = (
+                    _item.value or "Jackptot lotter new game rule."
+                )
                 continue
             if isinstance(_item, ft.Row):
                 label = ""
@@ -222,7 +231,7 @@ class input_user_rule(ft.Card):
                     continue
                 temp["randomData"][label] = label_value
         global jackpot_seting
-        print(f"bind temple dict {temp} {jackpot_seting}")
+        logr.info(f"bind temple dict {temp} {jackpot_seting}")
         with open(jackpot_seting, "w", encoding="utf-8") as f:
             json.dump(temp, f, indent=4, ensure_ascii=False)
         self.page.session.store.set("settings", temp)
@@ -245,6 +254,10 @@ class input_user_rule(ft.Card):
         return {"enabled": False}
 
 
+# endregion
+
+
+# region showRule
 class showRule(ft.Card):
     __name__ = "showRule"
 
@@ -256,10 +269,10 @@ class showRule(ft.Card):
         self.running = True
         try:
             self.updateCard()
-        except Exception as e:
-            print(f"{self.__name__} running error {e}.")
+        except Exception as ex:
+            logr.error(f"{self.__name__} running error.", ex)
         finally:
-            print(f"{self.__name__} running over.")
+            logr.info(f"{self.__name__} running over.")
 
     def will_unmount(self):
         self.running = False
@@ -270,7 +283,7 @@ class showRule(ft.Card):
     def get_lottery_text(self, exp: str):
         spans = []
         before, sep, after = exp.partition("+")
-        # print([before.strip(), sep.strip(), after.strip()])
+        # logr.info([before.strip(), sep.strip(), after.strip()])
         # 2. 匹配逻辑
         match [before.strip(), sep.strip(), after.strip()]:
             # 情况 A: 刚好两组数据（如 6+1 模式）
@@ -311,13 +324,32 @@ class showRule(ft.Card):
             spans=spans,
         )
 
+    async def __load_json_setting(self):
+        apply_rule = self.page.session.store.get("settings")
+        if apply_rule:
+            return apply_rule
+        json_path = pathlib.Path(jackpot_seting)
+        if not json_path.exists():
+            return
+        try:
+            with json_path.open(mode="r", encoding="UTF-8") as r:
+                temp = json.load(r)
+                # logr.info(f'temp: {temp}')
+                self.page.session.store.set("settings", temp)
+                return temp
+        except Exception as ex:
+            logr.error(f"__load_json_setting run error.", ex)
+            return
+
     async def __update_card(self):
         if not self.running:
             return
         await asyncio.sleep(0.5)
-        apply_rule = self.page.session.store.get("settings")
+        apply_rule = await self.__load_json_setting()
         if not apply_rule:
             return
+        # 在这里添加读写 json 文件的处理方式
+        logr.info(f"{apply_rule is None = }")
         randomDatax = apply_rule.get("randomData", None)
         if not randomDatax:
             return
@@ -336,7 +368,7 @@ class showRule(ft.Card):
                     )
                 )
                 continue
-            # print(f'{key} {item} ==-==')
+            # logr.info(f'{key} {item} ==-==')
             count_range = f"{item['range_start']} - {item['range_end']}"
             count = item["count"]
 
@@ -352,7 +384,7 @@ class showRule(ft.Card):
         self.update()
 
     def __build_card(self):
-        print("bulid card is running.")
+        logr.info("bulid card is running.")
         return ft.Container(
             padding=12,
             # expand=True,
@@ -374,6 +406,10 @@ class showRule(ft.Card):
         )
 
 
+# endregion
+
+
+# region DefaultSettings
 class DefaultSettings(ft.Card):
     """默认设置指示器"""
 
@@ -489,6 +525,10 @@ class DefaultSettings(ft.Card):
         )
 
 
+# endregion
+
+
+# region UserDirectory
 class UserDirectory(ft.Card):
     """用户目录指示器"""
 
@@ -497,35 +537,36 @@ class UserDirectory(ft.Card):
     def __init__(self):
         super().__init__()
         self.file_picker = ft.FilePicker()
-        self.stored_dir = None
+        self.stored_id = None
         self.tips = ft.Text(
-            "💡 Tip: Set the user directory to store filter files and saved images.",
+            "💡 Tip: The app saves the filter path by default.",
             color=DraculaColors.FOREGROUND,
             size=16,
             max_lines=2,
             # overflow=ft.TextOverflow.ELLIPSIS,
             no_wrap=False,
         )
-        self.select_dir = ft.Button(
-            "User Directory",
-            icon=ft.Icons.FOLDER_OFF,
-            bgcolor=DraculaColors.ORANGE,
-            color=DraculaColors.BACKGROUND,
-            on_click=lambda _: self.page.run_task(self.select_user_dir),
+        self.clear_id = ft.Button(
+            "Clean up ID",
+            icon=ft.Icons.ACCOUNT_CIRCLE,
+            color=DraculaColors.PINK,
+            style=ft.ButtonStyle(
+                side=ft.BorderSide(width=1, color=DraculaColors.PINK),
+            ),
+            on_click=lambda _: self.clean_up_id(),
         )
-        self.select_dir_done = False
         self.content = self.__build_card()
         self.count = 10
 
     def did_mount(self):
         self.running = True
         try:
-            if not self.select_dir_done:
-                self.page.run_task(self.Checking_user_dir)
-        except Exception as e:
-            print(f"{self.__name__} running error {e}.")
+            if not self.stored_id:
+                self.page.run_task(self.Checking_user_id)
+        except Exception as ex:
+            logr.error(f"{self.__name__} running error.", ex)
         finally:
-            print(f"{self.__name__} running over.")
+            logr.info(f"{self.__name__} running over.")
 
     def will_unmount(self):
         self.running = False
@@ -540,7 +581,7 @@ class UserDirectory(ft.Card):
             content=ft.Row(
                 controls=[
                     self.tips,
-                    self.select_dir,
+                    self.clear_id,
                 ],
                 spacing=5,
                 wrap=True,
@@ -556,69 +597,33 @@ class UserDirectory(ft.Card):
         self.tips.update()
         await asyncio.sleep(2)
 
-    async def Checking_user_dir(self):
+    async def Checking_user_id(self):
         if self.running:
             await asyncio.sleep(0.5)  # 初始延迟，确保页面加载完成
-
-            temp = await self.getuser_dir()
+            temp = await ft.SharedPreferences().get("stored_id")
             if temp:
-                await self.update_tips_value(
-                    f"Using directory ../{os.path.basename(os.path.normpath(temp))}"
-                )
-                self.select_dir.visible = False
-                self.select_dir.update()
-                self.select_dir_done = True
+                self.stored_id = temp
+                logr.info(f"Found Storage id: {temp}")
+            else:
+                id = f"{randomData.generate_secure_string(8)}"
+                self.stored_id = os.path.join(app_temp_path, f"{id}.dict")
+                await ft.SharedPreferences().set("stored_id", self.stored_id)
+                self.clean_up_id()
+            await self.update_tips_value(f"Using configuration files {self.stored_id}")
 
-    # async def import_configs(self, path: str):
-    #     """Do you want to import the configuration file?"""
-    #     default_files = {"jackpot_settings.json":"","jackpot_filters.dict":""}
-    #     with os.scandir(path) as entries:
-    #         for entry in entries:
-    #             if entry.name.lower() in default_files and entry.is_file():
-    #                 # 使用 os.access 检查当前用户是否有读取权限 (R_OK)
-    #                 try:
-    #                     # 尝试直接读取，而不是先检查权限
-    #                     with open(entry.path, "rb") as f:
-    #                         _ = f.read(1024)
-    #                     default_files[entry.name] = entry.path
-    #                     await self.update_tips_value(f"{entry.name} read successfully.")
-    #                 except Exception as e:
-    #                     name = entry.name
-    #                     path = entry.path
-    #                     ext = os.path.splitext(name)[1].lstrip(".").lower()
-    #                     pickFile = await self.file_picker.pick_files(
-    #                         dialog_title=f'Select a "{name}" file',
-    #                         initial_directory=os.path.dirname(path),
-    #                         allowed_extensions=[ext] if ext else None
-    #                     )
-    #                     if pickFile:
-    #                         default_files[entry.name] = pickFile[0].path
-    #     if all(v!="" for _,v in default_files.items()):
-    #         await ft.SharedPreferences().set("Lotter_File", json.dumps(default_files))
-    #         await self.update_tips_value(f"File path update complete.")
-
-    async def getuser_dir(self):
-        """获取用户目录"""
-        await self.update_tips_value("Check the user directory.")
-        if self.page.web:
-            temp = app_data_path
-            await self.update_tips_value("web mode, using system path.")
-            return temp
-        else:
-            temp = await ft.SharedPreferences().get("user_dir")
-            await self.update_tips_value("using SharedPreferences path.")
-            return temp
-
-    async def select_user_dir(self):
-        if not self.page.web:
-            picked_dir = await self.file_picker.get_directory_path(
-                dialog_title="Please select a directory?"
-            )
-            if picked_dir:
-                await ft.SharedPreferences().set("user_dir", picked_dir)
-                await self.Checking_user_dir()
+    def clean_up_id(self):
+        if not self.stored_id:
+            return
+        filePath = pathlib.Path(self.stored_id)
+        filePath.parent.mkdir(parents=True, exist_ok=True)
+        filePath.write_text("")
+        logr.info(f"clean_up_id is over.")
 
 
+# endregion
+
+
+# region SetingsPage
 class SetingsPage:
     """设置页面类"""
 
@@ -691,3 +696,6 @@ class SetingsPage:
             expand=True,
             scroll=ft.ScrollMode.HIDDEN,
         )
+
+
+# endregion

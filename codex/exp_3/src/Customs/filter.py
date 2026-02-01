@@ -2,614 +2,27 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-27 05:21:21
+# @Last Modified time: 2026-02-01 02:22:45
 
 from .ColorTokenizer import Tokenizer, spiltfortarget
 from .jackpot_core import filterFunc
 from .SnackBar import get_snack_bar
 from .DraculaTheme import DraculaColors
+from .jackpot_core import randomData
+from .loger import logr
 import flet as ft
 import os
 import json
+import re
 import asyncio
 import hashlib
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
-# jackpot_filers = os.path.join(app_data_path, "jackpot_filters.dict")
 
 
-# class UserdirButton(ft.TextButton):
-#     def __init__(
-#         self,
-#     ):
-#         super().__init__()
-#         self.showimg = ft.Image(
-#             src="filter.png",
-#             fit=ft.BoxFit.FIT_HEIGHT,
-#             width=328 * 0.45,
-#             height=112 * 0.45,
-#         )
-#         self.content = ft.Container(
-#             content=self.showimg,
-#             # 设置缩放动画：200毫秒，减速曲线
-#             animate=ft.Animation(600, ft.AnimationCurve.EASE_IN_OUT),
-#         )
-#         self.user_dir = app_data_path
-
-#     def animate_filter(self, flg: int = 1):
-#         # 动画逻辑：例如点击后放大并改变颜色
-#         scale = 1.2 if flg == 1 else 1.0
-#         self.showimg.scale = scale  # 改变颜色
-#         self.page.update()
-#         # print(f"animate is runing.{self.content.scale} {flg=}")
-
-#     def setting(self, save, load):
-#         self.save_funx = save
-#         self.load_funx = load
-
-#     def did_mount(self):
-#         self.ads = self.ad()
-#         self.page.overlay.append(self.ads)
-#         self.runing = True
-#         self.content.on_long_press = self.handle_long_press
-
-#     def will_unmount(self):
-#         self.runing = False
-
-#     async def select_dir(self):
-#         stored_dir = await ft.SharedPreferences().get("user_dir")
-#         if stored_dir:
-#             self.user_dir = stored_dir
-#             return self.user_dir
-
-#         if not self.page.web:
-#             picked_dir = await ft.FilePicker().get_directory_path(
-#                 dialog_title="Please select a directory?"
-#             )
-#             if picked_dir:
-#                 await ft.SharedPreferences().set("user_dir", picked_dir)
-#                 self.user_dir = picked_dir
-#                 return self.user_dir
-
-#         return self.user_dir
-
-#     def handle_long_press(self):
-#         self.animate_filter(1)
-#         self.page.run_task(self.select_dir)
-#         self.ads.open = True
-#         self.page.update()
-
-#     def ad(self):
-#         return ft.AlertDialog(
-#             title=ft.Text("Filter settings saved"),
-#             content=ft.Text("Do you need to save or load jackpot_filters.dict?"),
-#             actions=[
-#                 ft.TextButton("Save", on_click=self.handle_save),
-#                 ft.TextButton(
-#                     "Load",
-#                     on_click=self.handle_load,
-#                 ),
-#             ],
-#             on_dismiss=lambda _: self.animate_filter(0),
-#             actions_alignment=ft.MainAxisAlignment.END,
-#         )
-
-#     def handle_save(self):
-#         # print(f"{self.user_dir=}")
-#         try:
-#             if self.save_funx:
-#                 self.save_funx(self.user_dir)
-#         finally:
-#             self.ads.open = False
-#             self.page.update()
-
-#     def handle_load(self):
-#         # print(f"{self.user_dir=}")
-#         try:
-#             if self.load_funx:
-#                 self.load_funx(self.user_dir)
-#         finally:
-#             self.ads.open = False
-#             self.page.update()
-
-
-# class AI_Auto_input(ft.TextField):
-#     def __init__(self):
-#         super().__init__()
-#         self.border = ft.InputBorder.UNDERLINE
-#         self.expand = True
-#         self.on_change = self.on_change_input
-
-#     def did_mount(self):
-#         self.runing = True
-#         return super().did_mount()
-
-#     def will_unmount(self):
-#         self.runing = False
-#         return super().will_unmount()
-
-#     def on_change_input(self, e):
-#         # print(f"uset input: {self.value}")
-#         return
-#         self.page.run_task(self.ai_sugguest_set)
-
-#     async def ai_sugguest_set(self):
-#         """已经废弃不可食用"""
-#         await asyncio.sleep(0.3)
-#         # if not self.runing:
-#         #     return
-#         # if not self.value:
-#         #     self.suggestions = []
-#         #     self.update()
-#         #     return
-#         # self.suggestions = AI_gen_sugguest_re(self.value)
-#         # self.update()
-
-
-# class Decrement_Button(ft.Container):
-#     """圆形按钮"""
-
-#     def __init__(
-#         self,
-#         ball_size: int = 32,
-#         WH: float = 0.0,
-#         Start_Value=1,
-#         Loop_Value=20,
-#         bgcolor=DraculaColors.RED,
-#         onClickOutside=None,
-#         onLongPressOutside=None,
-#     ):
-#         super().__init__()
-#         self.data = Start_Value
-#         self.Start_Value = Start_Value
-#         self.Loop_Value = Loop_Value
-#         self.text = f"{self.data}"
-#         self.ball_size = ball_size
-#         self.content = ft.Text(
-#             value=self.text,
-#             color=DraculaColors.FOREGROUND,
-#             size=self.ball_size * 0.45,
-#             weight=ft.FontWeight.BOLD,
-#         )
-#         self.width = self.ball_size * WH if WH > 0 else self.ball_size
-#         self.height = self.ball_size
-#         self.bgcolor = bgcolor
-#         self.border_radius = self.ball_size / 2
-#         self.alignment = ft.Alignment.CENTER
-#         self.shadow = ft.BoxShadow(
-#             spread_radius=1,
-#             blur_radius=4,
-#             color="#42000000",
-#             offset=ft.Offset(0, 2),
-#         )
-#         self.onClickOutside_callback = onClickOutside
-#         self.onLongPressOutside_callback = onLongPressOutside
-#         self.on_click = self.handle_click
-#         self.on_long_press = self.handle_long_press
-
-#     def handle_click(self, e):
-#         value = self.data
-#         value += 1
-#         if value > self.Loop_Value:
-#             value = 1
-#         self.data = value
-#         self.content.value = f"{self.data}"
-#         print(f"{self.data=} {self.content.value=}")
-#         self.update()
-#         if self.onClickOutside_callback:
-#             self.onClickOutside_callback(e)
-
-#     def handle_long_press(self, e):
-#         value = self.data
-#         value -= 2
-#         if value < self.Start_Value:
-#             value = self.Loop_Value
-#         self.data = value
-#         self.content.value = f"{self.data}"
-#         print(f"{self.data=} {self.content.value=}")
-#         self.update()
-#         if self.onLongPressOutside_callback:
-#             self.onLongPressOutside_callback(e)
-
-
-# class select_fang(ft.Container):
-#     def __init__(self, name: str = "1", size=32, on_select=None):
-#         super().__init__()
-#         self.block_size = size
-#         self.content = ft.Text(str(name), size=self.block_size * 0.55)
-#         self.width = self.block_size
-#         self.height = self.block_size
-#         self.border_radius = 5
-#         self.alignment = ft.Alignment.CENTER
-#         self.animate = ft.Animation(300, ft.AnimationCurve.DECELERATE)  # 颜色切换动画
-#         self.bgcolor = DraculaColors.CURRENT_LINE
-#         self.on_click = self.handle_click
-#         self.name = name
-#         self.selected = False
-#         self.on_select_callback = on_select
-
-#     def handle_click(self, e):
-#         self.selected = not self.selected
-#         self.bgcolor = (
-#             DraculaColors.PURPLE if self.selected else DraculaColors.CURRENT_LINE
-#         )
-#         self.update()
-
-#         if self.on_select_callback:
-#             self.on_select_callback(e)
-
-
-# class tary(ft.Row):
-#     def __init__(self):
-#         super().__init__()
-#         self.command = ""
-#         self.com_args = {0: 1, 1: 1}
-#         self.opet_command = ""
-#         self.opet_args = {0: 1, 1: 1}
-#         self.weic_comd = ""
-#         self.weic_args = []
-#         self.gui_size_font = 10
-#         self.showcommand = ft.Text(
-#             value="wait...", color=DraculaColors.COMMENT, size=12
-#         )
-#         self.uc_haed = ft.CupertinoSlidingSegmentedButton(
-#             thumb_color=DraculaColors.RED,
-#             selected_index=0,
-#             controls=[
-#                 ft.Text("null", size=self.gui_size_font),
-#                 ft.Text("bitX", size=self.gui_size_font),
-#                 ft.Text("bitX,Y", size=self.gui_size_font),
-#                 ft.Text("modX", size=self.gui_size_font),
-#             ],
-#             on_change=lambda _: self.uc_haed_change(),
-#         )
-#         self.uc_opet = ft.CupertinoSlidingSegmentedButton(
-#             thumb_color=DraculaColors.RED,
-#             selected_index=0,
-#             controls=[
-#                 ft.Text(">", size=self.gui_size_font),
-#                 ft.Text("<", size=self.gui_size_font),
-#                 ft.Text("range", size=self.gui_size_font),
-#             ],
-#             on_change=lambda _: self.uc_opet_change(),
-#         )
-#         self.uc_weic = ft.CupertinoSlidingSegmentedButton(
-#             thumb_color=DraculaColors.RED,
-#             selected_index=0,
-#             controls=[
-#                 ft.Text("#", size=self.gui_size_font),
-#                 ft.Text("Z", size=self.gui_size_font),
-#                 ft.Text("H", size=self.gui_size_font),
-#                 ft.Text("J", size=self.gui_size_font),
-#                 ft.Text("O", size=self.gui_size_font),
-#                 ft.Text("M3", size=self.gui_size_font),
-#                 ft.Text("W", size=self.gui_size_font),
-#             ],
-#             on_change=lambda _: self.uc_weic_change(),
-#         )
-#         self.uc_haed_row = ft.Row(
-#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-#         )
-#         self.uc_opet_row = ft.Row(
-#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-#         )
-#         self.uc_weic_row = ft.Row(
-#             expand=True, spacing=5, alignment=ft.MainAxisAlignment.START
-#         )
-#         # she zhi
-#         self.visible = False
-#         self.controls = [
-#             #
-#             ft.Column(
-#                 spacing=5,
-#                 controls=[
-#                     ft.Divider(),
-#                     ft.Row(
-#                         controls=[self.uc_haed],
-#                         expand=True,
-#                     ),
-#                     self.uc_haed_row,
-#                     ft.Row(
-#                         controls=[self.uc_opet],
-#                         expand=True,
-#                     ),
-#                     self.uc_opet_row,
-#                     ft.Row(
-#                         controls=[self.uc_weic],
-#                         expand=True,
-#                     ),
-#                     self.uc_weic_row,
-#                     ft.Row(
-#                         controls=[self.showcommand],
-#                         expand=True,
-#                     ),
-#                     ft.Divider(),
-#                 ],
-#                 expand=True,
-#             ),
-#         ]
-#         # self.tight = True
-
-#     def did_mount(self):
-#         self.uc_haed_change()
-#         self.uc_opet_change()
-#         self.uc_weic_change()
-#         return super().did_mount()
-
-#     def buil_command(self):
-#         """格式化命令行"""
-#         command = ""
-#         match self.command:
-#             case "bitX":
-#                 command = f"bit{self.com_args[0]}"
-#             case "bitX,Y":
-#                 command = f"bit{self.com_args[0]},{self.com_args[1]}"
-#             case "modX":
-#                 command = f"mod{self.com_args[0]}"
-#             case _:
-#                 pass
-
-#         command_opet = ""
-#         match self.opet_command:
-#             case ">":
-#                 command_opet = f">{self.opet_args[0]}"
-#             case "<":
-#                 command_opet = f"<{self.opet_args[0]}"
-#             case "range":
-#                 command_opet = f"range {self.opet_args[0]},{self.opet_args[1]}"
-#             case _:
-#                 pass
-
-#         command_weic = ""
-#         match self.weic_comd:
-#             case "--z":
-#                 command_weic = "--z"
-#             case "--h":
-#                 command_weic = "--h"
-#             case "--j":
-#                 command_weic = "--j"
-#             case "--o":
-#                 command_weic = "--o"
-#             case "--m3":
-#                 if self.weic_args:
-#                     command_weic = f"--m3{''.join(map(str, self.weic_args))}"
-
-#             case "--w":
-#                 if self.weic_args:
-#                     command_weic = f"--w{''.join(map(str, self.weic_args))}"
-
-#             case _:
-#                 command_weic = ""
-
-#         all_command = [command, command_opet, command_weic]
-#         self.showcommand.value = " ".join(all_command)
-
-#     def loop_number_click(self, e, command, com_args):
-#         value = e.control.data
-#         self.command = command
-#         self.com_args[com_args] = value
-#         self.buil_command()
-
-#     def loop_number_long(self, e, command, com_args):
-#         value = e.control.data
-#         self.command = command
-#         self.com_args[com_args] = value
-#         self.buil_command()
-
-#     def uc_haed_change(self):
-#         select_index = self.uc_haed.selected_index
-#         flg_text = self.uc_haed.controls[select_index].value
-#         new_row = []
-#         match flg_text:
-#             case "null":
-#                 self.uc_haed_row.visible = False
-#             case "bitX":
-#                 new_row = [
-#                     ft.Text("bit"),
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e,
-#                         c=f"bitX",
-#                         ca=0: self.loop_number_click(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="bitX",
-#                         ca=0: self.loop_number_long(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=20,
-#                     ),
-#                 ]
-#             case "bitX,Y":
-#                 new_row = [
-#                     ft.Text("bit"),
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e,
-#                         c=f"bitX,Y",
-#                         ca=0: self.loop_number_click(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="bitX,Y",
-#                         ca=0: self.loop_number_long(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=20,
-#                     ),
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.COMMENT,
-#                         onClickOutside=lambda e,
-#                         c=f"bitX,Y",
-#                         ca=1: self.loop_number_click(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="bitX,Y",
-#                         ca=1: self.loop_number_long(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=20,
-#                     ),
-#                 ]
-#             case "modX":
-#                 new_row = [
-#                     ft.Text("mod"),
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e,
-#                         c=f"modX",
-#                         ca=0: self.loop_number_click(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="modX",
-#                         ca=0: self.loop_number_long(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=20,
-#                     ),
-#                 ]
-#         self.uc_haed_row.controls = new_row
-#         self.uc_haed_row.visible = True
-#         self.command = flg_text
-#         self.buil_command()
-#         self.update()
-
-#     def select_opt_change(self, e, opet, i):
-#         value = e.control.data
-#         self.opet_command = opet
-#         self.opet_args[i] = value
-#         self.buil_command()
-#         # print(f"select opt {e.control.value}")
-
-#     def uc_opet_change(self):
-#         select_index = self.uc_opet.selected_index
-#         flg_text = self.uc_opet.controls[select_index].value
-#         new_row = []
-#         #! 在安卓系统下极其难用
-#         match flg_text:
-#             case ">":
-#                 new_row = [
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e, c=f">", ca=0: self.select_opt_change(
-#                             e, c, ca
-#                         ),
-#                         onLongPressOutside=lambda e,
-#                         c=">",
-#                         ca=0: self.select_opt_change(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=160,
-#                     ),
-#                 ]
-#             case "<":
-#                 new_row = [
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e, c=f"<", ca=0: self.select_opt_change(
-#                             e, c, ca
-#                         ),
-#                         onLongPressOutside=lambda e,
-#                         c="<",
-#                         ca=0: self.select_opt_change(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=160,
-#                     ),
-#                 ]
-#             case "range":
-#                 new_row = [
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.CURRENT_LINE,
-#                         onClickOutside=lambda e,
-#                         c=f"range",
-#                         ca=0: self.select_opt_change(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="range",
-#                         ca=0: self.select_opt_change(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=160,
-#                     ),
-#                     Decrement_Button(
-#                         ball_size=25,
-#                         WH=1.65,
-#                         bgcolor=DraculaColors.COMMENT,
-#                         onClickOutside=lambda e,
-#                         c=f"range",
-#                         ca=1: self.select_opt_change(e, c, ca),
-#                         onLongPressOutside=lambda e,
-#                         c="range",
-#                         ca=1: self.select_opt_change(e, c, ca),
-#                         Start_Value=1,
-#                         Loop_Value=160,
-#                     ),
-#                 ]
-#         self.uc_opet_row.controls = new_row
-#         self.uc_opet_row.visible = True
-#         self.opet_command = flg_text
-#         self.buil_command()
-#         self.update()
-
-#     def chip_select(self, e):
-#         label_value = e.control.name
-#         isSelect = e.control.selected
-#         size = e.control.block_size
-#         if isSelect:
-#             if label_value not in self.weic_args:
-#                 self.weic_args.append(label_value)
-#         else:
-#             if label_value in self.weic_args:
-#                 self.weic_args.remove(label_value)
-#         self.buil_command()
-#         print(f"{label_value} is select {isSelect} {self.weic_args} {size=}")
-
-#     def uc_weic_change(self):
-#         select_index = self.uc_weic.selected_index
-#         flg_text = self.uc_weic.controls[select_index].value
-#         new_row = []
-#         match flg_text:
-#             case "Z":
-#                 self.weic_comd = "--z"
-#             case "H":
-#                 self.weic_comd = "--h"
-#             case "J":
-#                 self.weic_comd = "--j"
-#             case "O":
-#                 self.weic_comd = "--o"
-#             case "M3":
-#                 self.weic_comd = "--m3"
-#                 new_row = [
-#                     select_fang(name=i, size=25, on_select=self.chip_select)
-#                     for i in [0, 1, 2]
-#                 ]
-#             case "W":
-#                 self.weic_comd = "--w"
-#                 new_row = [
-#                     select_fang(name=i, size=20, on_select=self.chip_select)
-#                     for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-#                 ]
-#             case _:
-#                 self.weic_comd = ""
-#         self.uc_weic_row.controls = new_row
-#         self.uc_weic_row.visible = True
-#         self.weic_args = []
-#         self.buil_command()
-#         self.update()
-#         # print(f"run uc_weic_change done.")
-
-
-_ = r"""_|_|_|_|  _|  _|    _|                                    _|        _|              _|      
-_|            _|  _|_|_|_|    _|_|    _|  _|_|    _|_|_|  _|              _|_|_|  _|_|_|_|  
-_|_|_|    _|  _|    _|      _|_|_|_|  _|_|      _|_|      _|        _|  _|_|        _|      
-_|        _|  _|    _|      _|        _|            _|_|  _|        _|      _|_|    _|      
-_|        _|  _|      _|_|    _|_|_|  _|        _|_|_|    _|_|_|_|  _|  _|_|_|        _|_|  """
-
-
+# region FiltersList
 class FiltersList(ft.Card):
     def __init__(
         self,
@@ -674,7 +87,7 @@ class FiltersList(ft.Card):
     def addFilter(self, scriptd: dict):
         _scd = scriptd.copy()
         if "" in _scd.values():
-            print(f"add filter error {_scd}")
+            logr.info(f"add filter error {_scd}.")
             return
         if not isinstance(self.content.content, ft.Row):
             return
@@ -716,7 +129,7 @@ class FiltersList(ft.Card):
                 return
             e_chip = e.control
             e_script = e.control.data
-            # print(f"edit {e_chip.data}")
+            # logr.info(f"edit {e_chip.data}")
             hashcode(e_script, "del")
             controls.remove(e_chip)
             self.filtersAll.remove(e_script)
@@ -773,6 +186,15 @@ class FiltersList(ft.Card):
             wrap=True,
             controls=[
                 ft.Switch(
+                    thumb_color={
+                        ft.ControlState.DEFAULT: DraculaColors.FOREGROUND,
+                        ft.ControlState.SELECTED: DraculaColors.PINK,
+                    },
+                    track_color={
+                        ft.ControlState.DEFAULT: DraculaColors.BACKGROUND,
+                        ft.ControlState.SELECTED: DraculaColors.BACKGROUND,
+                    },
+                    track_outline_color=DraculaColors.PINK,
                     value=False,
                     on_change=self.handle_switch,
                     tooltip=ft.Tooltip(
@@ -784,6 +206,17 @@ class FiltersList(ft.Card):
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.START,
         )
+
+    def clear_all(self):
+        """清空 filter 设置"""
+        row = self.content.content
+        if not isinstance(row, ft.Row):
+            return
+        rows = [x for x in row.controls if isinstance(x, ft.Switch)]
+        row.controls = rows
+        self.filtersAll.clear()
+        self.filterSeed.clear()
+        row.update()
 
     def handle_switch(self, e):
         switch = e.control
@@ -813,23 +246,24 @@ class FiltersList(ft.Card):
         if self.filtersAll_change == "none":
             return
         self.page.session.store.set("filters", self.filtersAll)
-        filter_path = await ft.SharedPreferences().get("filter_path")
-        if self.page.web and not filter_path:
-            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
-        elif not filter_path:
-            user_dir_path = await ft.SharedPreferences().get("user_dir")
-            user_dir_path = user_dir_path if user_dir_path else app_data_path
-            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
+        stored_id = await ft.SharedPreferences().get("stored_id")
+        if not stored_id:
+            logr.error("ID not found.")
+            return
         try:
-            with open(filter_path, "w", encoding="utf-8") as f:
+            with open(stored_id, "w", encoding="utf-8") as f:
                 for item in self.filtersAll:
                     f.write(json.dumps(item, ensure_ascii=False) + "\n")
-            print(f"saveTodict is run.")
+            logr.info(f"saveTodict is run.")
             self.filtersAll_change = "none"
         except Exception as ex:
-            print(f'Auto Save error {ex}')
+            logr.info(f"Auto Save error.", ex)
 
 
+# endregion
+
+
+# region InputPad
 class InputPad(ft.Card):
     def __init__(self):
         super().__init__()
@@ -840,6 +274,7 @@ class InputPad(ft.Card):
         self.funcs_dc = {}
         self.target_pn = ["all"]
         self.pad_data = {"func": "", "target": "", "condition": ""}
+        self.search_pos = 0
 
     def did_mount(self):
         self.running = True
@@ -873,13 +308,13 @@ class InputPad(ft.Card):
                     self.pad_data["func"] = script["func"]
                     self.pad_data["target"] = script["target"]
                     self.pad_data["condition"] = script["condition"]
-                    # print(f"editPad {self.pad_data=} {text_spans[1].text=}")
+                    # logr.info(f"editPad {self.pad_data=} {text_spans[1].text=}")
                 case "__command_input":
                     if not isinstance(item, ft.TextField):
                         continue
                     item.value = script["condition"]
                 case "__apply_text":
-                    # print('__apply_text.')
+                    # logr.info('__apply_text.')
                     if not isinstance(item, ft.Row):
                         continue
                     if not isinstance(item.controls[0], ft.Chip):
@@ -900,6 +335,46 @@ class InputPad(ft.Card):
             content=self.__Pad(),
         )
 
+    # region quick input
+    def __quick_input(self):
+        quick = [
+            ">",
+            "<",
+            "--",
+            "bit",
+            "range",
+            "mod",
+        ]
+
+        def handle_tap(e, k: str):
+            tfvp = self.input_field.value
+
+            if k.lower() not in tfvp:
+                if tfvp.endswith(" "):
+                    self.input_field.value += f"{k}"
+                elif tfvp == "":
+                    self.input_field.value += f"{k}"
+                else:
+                    self.input_field.value += f" {k}"
+
+            logr.info(f"tap {k}")
+
+        spans = []
+        for key in quick:
+            spans.append(
+                ft.Container(
+                    key=f"quick_{key}",
+                    content=ft.Text(f"{key}", size=15, color=DraculaColors.PURPLE),
+                    padding=ft.Padding(5, 2, 5, 2),
+                    on_click=lambda e, k=key: handle_tap(e, k),
+                )
+            )
+        self.quick_input = ft.Row(
+            spacing=5, expand=True, scroll=ft.ScrollMode.HIDDEN, controls=spans
+        )
+        return self.quick_input
+        # endregion
+
     def __Pad(self):
         """Add, Apply, Cancel"""
         return ft.Column(
@@ -913,6 +388,8 @@ class InputPad(ft.Card):
                 self.__FT_show,
                 ft.Divider(),
                 self.__command_input(),
+                # self.__shadow_input(),
+                self.__quick_input(),
                 ft.Divider(),
                 self.__apply_text(),
             ],
@@ -934,13 +411,118 @@ class InputPad(ft.Card):
             ],
         )
 
+    # region __Shadow_input
+
+    def __command_dict(self):
+        return {
+            re.compile(r"(\d+),$"): "{},",
+            re.compile(r"--$"): "z",
+            re.compile(r"--m$"): "3",
+            re.compile(r"--w$"): "{}{}{}",
+            re.compile(r"--w(\d+)$"): "{}{}{}",
+            re.compile(r"bi$"): "t",
+            re.compile(r"bit(\d+),$"): "{} ",
+            re.compile(r"mo$"): "d",
+            re.compile(r"ra$"): "nge ",
+            re.compile(r"ran$"): "ge ",
+        }
+
+    def __Automatic_append(self, numbers: list[int], format_str: str):
+        try:
+            if not numbers:
+                numbers = [0, 1, 2]
+                return format_str.format(*numbers)
+            else:
+                return format_str.format(*[x + 1 for x in numbers])
+        except:
+            numbers.append(numbers[-1] + 1)
+            return self.__Automatic_append(numbers, format_str)
+
+    def __shadow_input(self):
+        def add_quick(hint: str):
+            defquick = [x for x in self.quick_input.controls if x.key != "hint"]
+
+            new_hint = ft.Container(
+                key="hint",
+                content=ft.Text(f"{hint}", size=15, color=DraculaColors.PURPLE),
+                padding=ft.Padding(8, 2, 8, 2),
+                bgcolor=DraculaColors.CURRENT_LINE,
+                on_click=lambda _, k=hint: (
+                    setattr(
+                        self.input_field, "value", (self.input_field.value or "") + k
+                    ),
+                    self.input_field.update(),
+                ),
+            )
+            defquick.insert(0, new_hint)
+            self.quick_input.controls = defquick
+            self.quick_input.update()
+
+        def input_change(e):
+            val = self.input_field.value
+
+            # 1. 必须重置搜索位置和初始提示
+            self.search_pos = 0
+            # 2. 遍历命令库
+            for cmd_pattern, hint_template in self.__command_dict().items():
+                # 注意：cmd_pattern 应该是编译好的正则对象
+                search = cmd_pattern.search(val, pos=self.search_pos)
+
+                if search:
+                    start, end = search.span()
+                    # 3. 提取该匹配项内部或周边的数字 (根据需要调整)
+                    self.search_pos = end
+                    numbers = [int(x) for x in re.findall(r"\d+", val[start:end])]
+
+                    # 4. 尝试格式化提示
+                    try:
+                        formatted_hint = self.__Automatic_append(numbers, hint_template)
+                        # 5. 组合影子文字 (Prefix + Hint + Suffix)
+                        # self.hint_text.value = val[:start] + formatted_hint + val[end:]
+                        # self.input_field.suffix = formatted_hint
+                        logr.info(f"{formatted_hint=}")
+                        add_quick(formatted_hint)
+                        break  # 找到第一个匹配就退出，避免冲突
+                    except Exception as ex:
+                        logr.error(f"Format error.", ex)
+
+            self.pad_data["condition"] = val.strip()
+
+        self.input_field = ft.TextField(
+            key="__command_input",
+            label="Execute the script",
+            hint_text="exp: bit1,2 range 1,15 --z",
+            expand=1,
+            border=ft.InputBorder.UNDERLINE,
+            on_change=input_change,
+            # text_style=text_style,
+            # 移除默认内边距，方便对齐
+            content_padding=ft.Padding.all(0),
+            bgcolor=ft.Colors.TRANSPARENT,
+        )
+        # self.hint_text = ft.Text(
+        #     value="Execute the script",
+        #     color=ft.Colors.GREY_700,
+        #     style=text_style,
+        # )
+        return ft.Stack(
+            expand=True,
+            controls=[
+                # ft.Container(content=self.hint_text, padding=ft.padding.only(top=24)),
+                self.input_field,
+            ],
+        )
+
+    # endregion
+
+    # region TextField
     def __command_input(self):
         def input_change(e):
             if not isinstance(e.control, ft.TextField):
                 return
             self.pad_data["condition"] = f"{e.control.value}".strip()
 
-        return ft.TextField(
+        self.input_field = ft.TextField(
             data="__command_input",
             label="Execute the script",
             hint_text="exp: bit1,2 range 1,15 --z",
@@ -948,6 +530,9 @@ class InputPad(ft.Card):
             border=ft.InputBorder.UNDERLINE,
             on_change=input_change,
         )
+        return self.input_field
+
+    # endregion
 
     def __load_funxtarget(self):
         """Use "avg" to calculate the target "pa"."""
@@ -995,7 +580,7 @@ class InputPad(ft.Card):
         if not isinstance(e.control, ft.Chip):
             return
         e.control.label = "Click to add a filter."
-        # print(f'handle_apply_click {self.pad_data=}')
+        # logr.info(f'handle_apply_click {self.pad_data=}')
         if self.applycallback:
             self.applycallback(scriptd=self.pad_data)
         e.control.update()
@@ -1062,6 +647,10 @@ class InputPad(ft.Card):
             pass
 
 
+# endregion
+
+
+# region CommandList
 class CommandList(ft.Card):
     def __init__(self):
         super().__init__()
@@ -1069,13 +658,18 @@ class CommandList(ft.Card):
         self.addcallback = None
         self.filterAddItem = None
         self.give_data = None
+        self.filter_clear_all = None
         self.automatically_save = False
+        self.filemg = ft.FilePicker(on_upload=self.handle_upload)
 
     def did_mount(self):
         self.running = True
 
     def will_unmount(self):
         self.running = False
+
+    def setting_filter_clear_all(self, cleal_all: None):
+        self.filter_clear_all = cleal_all
 
     def setting_give_data(self, give_data: None):
         self.give_data = give_data
@@ -1095,27 +689,31 @@ class CommandList(ft.Card):
         return ft.Row(
             controls=[
                 ft.TextButton(
-                    expand=1,
                     key="add_close",
-                    icon=ft.Icons.FILTER,
+                    icon=ft.Icons.ADD_CARD,
                     content="Add",
                     on_click=self.handle_add,
                 ),
                 ft.TextButton(
-                    expand=1,
-                    icon=ft.Icons.SAVE,
-                    content="Save",
-                    on_click=self.handle_Save,
-                ),
-                ft.TextButton(
-                    expand=1,
                     icon=ft.Icons.FILE_OPEN,
                     content="Open",
                     on_click=self.handle_Open,
                 ),
+                ft.TextButton(
+                    icon=ft.Icons.FILE_DOWNLOAD,
+                    content="Save",
+                    on_click=self.handle_Save,
+                ),
+                ft.TextButton(
+                    icon=ft.Icons.FILE_UPLOAD,
+                    content="Load",
+                    on_click=self.handle_Load,
+                ),
             ],
             # 给这一行打个标签，方便以后提取数据
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            alignment=ft.MainAxisAlignment.START,
+            scroll=ft.ScrollMode.HIDDEN,
+            expand=True,
         )
 
     def setting_edit_stat_open(self):
@@ -1152,56 +750,62 @@ class CommandList(ft.Card):
                 e.control.update()
 
     async def handle_Save(self, e):
-        if not self.give_data:
-            return
-        fiter_data = self.give_data()
-        if not fiter_data:
-            return
-        self.page.session.store.set("filters", fiter_data)
-        filter_path = await ft.SharedPreferences().get("filter_path")
-        if self.page.web and not filter_path:
-            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
-            print(f"web mode {filter_path}")
-        elif not filter_path:
-            user_dir_path = await ft.SharedPreferences().get("user_dir")
-            user_dir_path = user_dir_path if user_dir_path else app_data_path
-            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
-            print(f"window linux ios android {filter_path}")
         try:
-            with open(filter_path, "w", encoding="utf-8") as f:
-                for item in fiter_data:
-                    f.write(json.dumps(item, ensure_ascii=False) + "\n")
+            stored_id = await ft.SharedPreferences().get("stored_id")
+            logr.info(f"stored_id: {stored_id}")
+            if not stored_id:
+                logr.error("ID not found.")
+                return
+            with open(stored_id, "r", encoding="utf-8") as f:
+                content = f.read()
+                content_bytes = content.encode("utf-8")
+                logr.info(f"content_bytes: {content_bytes}")
+                save_path = await self.filemg.save_file(
+                    dialog_title="Save as jackpot_filters.dict file.",
+                    allowed_extensions=["dict"],
+                    file_name="jackpot_filters.dict",
+                    src_bytes=content_bytes,
+                )
+                logr.info(f"save_path: {save_path}")
+                if save_path:
+                    with open(save_path, "wb") as f:
+                        f.write(content_bytes)
         except Exception as ex:
-            print(f"Default write error, insufficient permissions. {ex}")
-            json_lines = "\n".join(
-                [json.dumps(item, ensure_ascii=False) for item in fiter_data]
-            )
-            content_bytes = json_lines.encode("utf-8")
-            save_path = await ft.FilePicker().save_file(
-                dialog_title="Select the directory to store the jackpot_filters.dict file.",
-                allowed_extensions=["dict"],
-                file_name="jackpot_filters.dict",
-                initial_directory=await ft.SharedPreferences().get("user_dir"),
-                src_bytes=content_bytes,
-            )
-            if save_path:
-                await ft.SharedPreferences().set("filter_path", save_path)
-                print(f"Filter saved successfully. {save_path}")
+            logr.error(f"handle_Save error: {save_path}.", ex)
+        finally:
+            logr.info(f"Filter saved successfully. {save_path}")
 
     async def handle_Open(self, e):
-        filter_path = await ft.SharedPreferences().get("filter_path")
-        if self.page.web and not filter_path:
-            filter_path = os.path.join(app_data_path, "jackpot_filters.dict")
-            print(f"web mode {filter_path}")
-        elif not filter_path:
-            user_dir_path = await ft.SharedPreferences().get("user_dir")
-            user_dir_path = user_dir_path if user_dir_path else app_data_path
-            filter_path = os.path.join(user_dir_path, "jackpot_filters.dict")
-            print(f"window linux ios android {filter_path}")
+        stored_id = await ft.SharedPreferences().get("stored_id")
+        if not stored_id:
+            logr.error("ID not found.")
+            return
 
-        try:
+        fiter_data = []
+        if self.filter_clear_all:
+            self.filter_clear_all()
+        with open(stored_id, "r", encoding="utf-8") as f:
+            for line in f:
+                # 去掉行尾换行符并确保行不为空
+                line = line.strip()
+                if line:
+                    # 将每一行的 JSON 字符串转回字典对象
+                    item = json.loads(line)
+                    fiter_data.append(item)
+                    if self.filterAddItem:
+                        self.filterAddItem(item)
+        self.page.session.store.set("filters", fiter_data)
+        logr.info(f"Reading complete. {len(fiter_data)}")
+
+    def handle_upload(self, e):
+        logr.info(f"handle upload {e}")
+        if e.progress == 1.0 and e.error == None:
+            filepath = os.path.join(app_temp_path, e.file_name)
+            logr.info(f"upload Fullpath {filepath}")
             fiter_data = []
-            with open(filter_path, "r", encoding="utf-8") as f:
+            if self.filter_clear_all:
+                self.filter_clear_all()
+            with open(filepath, "r", encoding="utf-8") as f:
                 for line in f:
                     # 去掉行尾换行符并确保行不为空
                     line = line.strip()
@@ -1212,19 +816,34 @@ class CommandList(ft.Card):
                         if self.filterAddItem:
                             self.filterAddItem(item)
             self.page.session.store.set("filters", fiter_data)
-        except Exception as ex:
-            print(f"Default read error, insufficient permissions. {ex}")
-            select_files = await ft.FilePicker().pick_files(
-                dialog_title="Select the directory to store the jackpot_filters.dict file.",
-                allowed_extensions=["dict"],
+            logr.info(f"Reading complete. {len(fiter_data)}")
+
+    async def handle_Load(self, e):
+        try:
+            pick_result = await self.filemg.pick_files(
+                dialog_title="",
                 allow_multiple=False,
-                initial_directory=await ft.SharedPreferences().get("user_dir"),
+                allowed_extensions=["dict"],
             )
-            if select_files:
-                newPath = select_files[0].path
+            if not pick_result:
+                return
+            logr.info(f"selsect file: {pick_result}")
+            if self.page.web:
+                uplpads = [
+                    ft.FilePickerUploadFile(
+                        self.page.get_upload_url(pick_result[0].name, 600),
+                        "PUT",
+                        None,
+                        pick_result[0].name,
+                    )
+                ]
+                await self.filemg.upload(uplpads)
+            else:
                 fiter_data = []
-                with open(newPath, "r", encoding="utf-8") as f:
-                    for line in f:
+                if self.filter_clear_all:
+                    self.filter_clear_all()
+                with open(pick_result[0].path, "r", encoding="utf-8") as r:
+                    for line in r:
                         # 去掉行尾换行符并确保行不为空
                         line = line.strip()
                         if line:
@@ -1234,32 +853,15 @@ class CommandList(ft.Card):
                             if self.filterAddItem:
                                 self.filterAddItem(item)
                 self.page.session.store.set("filters", fiter_data)
-                await ft.SharedPreferences().set("filter_path", newPath)
-                print(f"Reading complete. {len(fiter_data)}")
-        # old code
-        # if temp:
-        #     jackpot_filters = os.path.join(temp, "jackpot_filters.dict")
-        #     fiter_data = []
-        #     with open(jackpot_filters, "r", encoding="utf-8") as f:
-        #         for line in f:
-        #             # 去掉行尾换行符并确保行不为空
-        #             line = line.strip()
-        #             if line:
-        #                 # 将每一行的 JSON 字符串转回字典对象
-        #                 item = json.loads(line)
-        #                 fiter_data.append(item)
-        #                 if self.filterAddItem:
-        #                     self.filterAddItem(item)
-        #     self.page.session.store.set("filters", fiter_data)
+                logr.info(f"Reading complete. {len(fiter_data)}")
+        except Exception as er:
+            logr.error(f"handle_Load error,", er)
 
 
-#
-#
-# FilterPage
-#
-#
+# endregion
 
 
+# region FilterPage
 class FilterPage:
     """筛选页面类"""
 
@@ -1279,6 +881,7 @@ class FilterPage:
         self.Command_List.setting_filte_add_item(
             filterAddItem=self.Filters_cmd_list.addFilter
         )
+        self.Command_List.setting_filter_clear_all(self.Filters_cmd_list.clear_all)
         self.Filters_cmd_list.setting_edit_Callback(self.Input_Pad.editePad)
         self.Filters_cmd_list.setting_command_stat(
             add_closed_stat=self.Command_List.setting_edit_stat_open
@@ -1306,3 +909,6 @@ class FilterPage:
             expand=True,
             scroll=ft.ScrollMode.HIDDEN,
         )
+
+
+# endregion

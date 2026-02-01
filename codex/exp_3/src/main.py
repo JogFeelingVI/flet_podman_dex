@@ -2,21 +2,22 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-27 04:21:27
+# @Last Modified time: 2026-02-01 04:45:20
 
 from Customs.DraculaTheme import DraculaColors
 from Customs.setings import SetingsPage
 from Customs.filter import FilterPage
 from Customs.lottery import LotteryPage
+from Customs.jackpot_core import randomData
 import flet as ft
 import os
-import json
-import asyncio
 
 # 获取系统标示
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
+
+os.environ["FLET_SECRET_KEY"] = randomData.generate_secure_string(16)
 
 
 async def main(page: ft.Page):
@@ -91,4 +92,4 @@ async def main(page: ft.Page):
 
 
 # 运行应用
-ft.run(main)
+ft.run(main, upload_dir=app_temp_path)
