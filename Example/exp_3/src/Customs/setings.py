@@ -2,11 +2,10 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-17 15:13:06
+# @Last Modified time: 2026-02-02 06:59:32
 
-from .DraculaTheme import DraculaColors, RandColor
+from .DraculaTheme import DraculaColors
 from .jackpot_core import randomData
-from dataclasses import dataclass, field
 from .loger import logr
 import flet as ft
 import json
@@ -14,7 +13,6 @@ import os
 import re
 import asyncio
 import pathlib
-import random
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
@@ -90,11 +88,10 @@ Lotter_Data = {
 
 
 # region input_user_rule
-class input_user_rule(ft.Container):
+class input_user_rule(ft.Card):
     def __init__(self):
         super().__init__()
         self.visible = False
-        self.bgX = RandColor()
         self.content = self.__build_card()
         self.render_filters = None
         self.row_name_char = 65
@@ -104,10 +101,6 @@ class input_user_rule(ft.Container):
                 "PA": {"enabled": True, "range_start": 0, "range_end": 9, "count": 1},
             }
         }
-        self.width = float("inf")
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.bgX))
-        self.bgcolor = ft.Colors.with_opacity(0.6, self.bgX)
-        self.border_radius = 10
 
     def setting_render_filters(self, render_filters=None):
         self.render_filters = render_filters
@@ -135,11 +128,6 @@ class input_user_rule(ft.Container):
                 ft.TextButton(
                     expand=1,
                     icon=ft.Icons.WINDOW,
-                    style=ft.ButtonStyle(
-                        bgcolor=self.bgX,
-                        color=DraculaColors.BACKGROUND,
-                        shape=ft.RoundedRectangleBorder(radius=5),
-                    ),
                     content="Apply",
                     on_click=self.handle_Apply,
                 ),
@@ -186,44 +174,29 @@ class input_user_rule(ft.Container):
         )
 
     def __build_card(self):
-        self.newruls = ft.Column(
-            spacing=5,
-            controls=[
-                self.__get_note(),
-                self.__get_range_count("a"),
-                self.__command_button(),
-            ],
+        return ft.Container(
+            padding=12,
+            # expand=True,
+            # opacity=0.65,
+            width=float("inf"),
+            border=ft.Border.all(2, DraculaColors.PINK),
+            border_radius=10,
+            content=ft.Column(
+                tight=True,
+                controls=[
+                    ft.Text("Add new game rules.", size=25),
+                    self.__get_note(),
+                    self.__get_range_count("a"),
+                    self.__command_button(),
+                ],
+            ),
         )
-        cols = ft.Column(
-            tight=True,
-            spacing=0,
-            controls=[
-                ft.Container(
-                    alignment=ft.Alignment.CENTER_LEFT,
-                    padding=ft.Padding(12, 5, 12, 5),
-                    content=ft.Text("Add new game rules.", size=16),
-                ),
-                ft.Container(
-                    border=ft.Border(
-                        top=ft.BorderSide(
-                            1, ft.Colors.with_opacity(0.3, DraculaColors.FOREGROUND)
-                        ),  # 宽度为 3, 颜色为蓝色
-                    ),
-                    bgcolor=ft.Colors.with_opacity(0.6, DraculaColors.CRADBG),
-                    border_radius=10,
-                    padding=ft.Padding(12, 5, 12, 5),
-                    content=self.newruls,
-                ),
-            ],
-        )
-
-        return cols
 
     def handle_add(self):
         self.row_name_char += 1
         new_row = self.__get_range_count(f"{chr(self.row_name_char)}")
-        temp_len = len(self.newruls.controls)
-        self.newruls.controls.insert(temp_len - 1, new_row)
+        temp_len = len(self.content.content.controls)
+        self.content.content.controls.insert(temp_len - 1, new_row)
 
     def handle_Cancel(self):
         self.visible = False
@@ -231,7 +204,7 @@ class input_user_rule(ft.Container):
 
     async def handle_Apply(self):
         temp = self.templejson.copy()
-        rows = self.newruls.controls
+        rows = self.content.content.controls
         for _item in rows:
             if isinstance(_item, ft.TextField):
                 temp["randomData"]["note"] = (
@@ -282,90 +255,72 @@ class input_user_rule(ft.Container):
 # endregion
 
 
-# region showRulev2
-class showRulev2(ft.Container):
+# region showRule
+class showRule(ft.Card):
+    __name__ = "showRule"
+
     def __init__(self):
         super().__init__()
-        self.width = float("inf")
-        self.border = ft.Border.all(
-            1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
-        )
-        self.border_radius = 10
-        self.runloadpage = False
-        self.clip_behavior = ft.ClipBehavior.HARD_EDGE
-        self.content = self.__build_content()
+        self.content = self.__build_card()
 
     def did_mount(self):
         self.running = True
-        self.page.run_task(self.loadpage)
-        self.page.run_task(self.__update_card)
+        try:
+            self.updateCard()
+        except Exception as er:
+            logr.error(f"{self.__name__} running error.",  {er})
+        finally:
+            logr.info(f"{self.__name__} running over.")
 
     def will_unmount(self):
         self.running = False
 
-    async def loadpage(self):
-        if self.runloadpage:
-            await asyncio.sleep(0.2)
-            return
-
-        def offset():
-            refcan = {"x": [1, 200], "y": [1, 10]}
-            _offset = {name: random.randint(x, y) for name, (x, y) in refcan.items()}
-            return _offset
-
-        def black():
-            color = RandColor()
-            size = random.randint(5, 30)
-            return ft.Container(
-                width=size,
-                height=size,
-                bgcolor=ft.Colors.with_opacity(0.2, color),
-                border_radius=size / 2,
-                offset=ft.Offset(**offset()),
-                # animate=ft.Animation(10000,ft.AnimationCurve.SLOW_MIDDLE),
-            )
-
-        for i in range(70):
-            tempblack = black()
-            self.Stack.controls.insert(0, tempblack)
-            self.Stack.update()
-            await asyncio.sleep(0.2)
-        self.runloadpage = True
-
-    def __build_content(self):
-        """pass"""
-        self.tips = ft.Text(
-            "💡 Load page...",
-            size=15,
-            color=ft.Colors.with_opacity(0.6, DraculaColors.GREEN),
-        )
-        self.neirong = ft.Column(
-            tight=True,
-            alignment=ft.MainAxisAlignment.START,
-            horizontal_alignment=ft.CrossAxisAlignment.START,
-            controls=[self.tips],
-        )
-
-        self.Stack = ft.Stack(
-            width=float("inf"),
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            controls=[
-                ft.Container(
-                    padding=12,
-                    width=float("inf"),
-                    content=self.neirong,
-                ),
-            ],
-        )
-        return self.Stack
-
-    def update_tips(self, value: str, color: str):
-        self.tips.value = f"💡 {value}"
-        self.tips.color = ft.Colors.with_opacity(0.6, color)
-        self.tips.update()
-
     def updateCard(self):
         self.page.run_task(self.__update_card)
+
+    def get_lottery_text(self, exp: str):
+        spans = []
+        before, sep, after = exp.partition("+")
+        # logr.info([before.strip(), sep.strip(), after.strip()])
+        # 2. 匹配逻辑
+        match [before.strip(), sep.strip(), after.strip()]:
+            # 情况 A: 刚好两组数据（如 6+1 模式）
+            case [b, s, a] if len(b) > len(a) and s == "+":
+                # 第一组（红球）
+                spans.append(
+                    ft.TextSpan(
+                        b,
+                        ft.TextStyle(
+                            color=DraculaColors.RED, weight=ft.FontWeight.W_900
+                        ),
+                    )
+                )
+                # 分隔符
+                spans.append(
+                    ft.TextSpan(
+                        f" {s} ",
+                        ft.TextStyle(color=DraculaColors.PURPLE, weight="W_900"),
+                    )
+                )
+                # 第二组（紫/蓝球）
+                spans.append(
+                    ft.TextSpan(
+                        a,
+                        ft.TextStyle(color=DraculaColors.PURPLE, weight="W_900"),
+                    )
+                )
+
+            # 情况 B: 多组数据（3组或更多）
+            case [b, s, a] if s == a == "" and b != a:
+                spans.append(
+                    ft.TextSpan(
+                        b, ft.TextStyle(color=DraculaColors.RED, weight="W_900")
+                    )
+                )
+        return ft.Text(
+            size=20,
+            spans=spans,
+        )
 
     async def __load_json_setting(self):
         apply_rule = self.page.session.store.get("settings")
@@ -381,158 +336,83 @@ class showRulev2(ft.Container):
                 self.page.session.store.set("settings", temp)
                 return temp
         except Exception as er:
-            self.update_tips("Load json setting run error.", "#ee0f0f")
-            logr.error(f"__load_json_setting run error.", {er})
+            logr.error(f"__load_json_setting run error.",{er})
             return
 
     async def __update_card(self):
-        self.update_tips(
-            "Run work update card.",
-            "#0f9cee",
-        )
+        if not self.running:
+            return
         await asyncio.sleep(0.5)
         apply_rule = await self.__load_json_setting()
         if not apply_rule:
-            self.update_tips(
-                "Please add game rules. You can customize them using [new rule] or use the preset options.",
-                "#eec90f",
-            )
             return
+        # 在这里添加读写 json 文件的处理方式
+        logr.info(f"{apply_rule is None = }")
         randomDatax = apply_rule.get("randomData", None)
         if not randomDatax:
-            self.update_tips("No relevant data was found for randomData.", "#ee290f")
             return
-        self.neirong.controls = [
-            self.display_note(randomDatax["note"]),
-            self.display_rules(randomDatax),
-        ]
-        self.neirong.update()
-
-    def display_rules(self, pn: dict):
-        rules = []
-        for key, item in pn.items():
-            if f"{key}".lower().startswith("p") and isinstance(item, dict):
-                # PA Number Selection Rules: Choose 5 out of 36.
-                if item["enabled"] == False:
-                    continue
-                ranges = item.get("range_end", 0)
-                count = item.get("count", 0)
-                rules.append(
+        example = randomData(seting=randomDatax).get_exp()
+        # textlist = [LotteryBalls(example, 32, "LE"), ft.Divider()]
+        textlist = [self.get_lottery_text(example), ft.Divider()]
+        for key, item in randomDatax.items():
+            if key == "note":
+                textlist.append(
                     ft.Text(
-                        value=f"{key} Number Selection Rules: Choose {count} out of {ranges}.",
-                        size=16,
-                        color=ft.Colors.with_opacity(
-                            0.6, color=DraculaColors.FOREGROUND
-                        ),
+                        f"{item}",
+                        size=15,
+                        weight="bold",
+                        color=DraculaColors.ORANGE,
+                        max_lines=2,
                     )
                 )
-                # end
-        example = randomData(seting=pn).get_exp()
-        conter = ft.Container(
-            padding=12,
-            border_radius=10,
-            width=float("inf"),
-            bgcolor=ft.Colors.with_opacity(0.1, RandColor()),
-            content=ft.Column(
-                spacing=0,
-                tight=True,
-                controls=[
-                    ft.Text(
-                        "Basic number selection rules".upper(),
-                        size=10,
-                        color=ft.Colors.with_opacity(
-                            0.3, color=DraculaColors.FOREGROUND
-                        ),
-                    ),
-                    *rules,
-                    ft.Text(
-                        "Example Number".upper(),
-                        size=10,
-                        color=ft.Colors.with_opacity(
-                            0.3, color=DraculaColors.FOREGROUND
-                        ),
-                    ),
-                    self.displayNumbers(example, 25),
-                    # ft.Text(f'{note}', color=DraculaColors.FOREGROUND, size=16),
-                ],
-            ),
-        )
-        return conter
-
-    def display_note(self, note: str):
-        conter = ft.Container(
-            padding=12,
-            border_radius=10,
-            width=float("inf"),
-            bgcolor=ft.Colors.with_opacity(0.3,RandColor()),
-            # blend_mode=ft.BlendMode.SCREEN,
-            content=ft.Column(
-                spacing=0,
-                tight=True,
-                controls=[
-                    ft.Text(
-                        "Rules and Regulations".upper(),
-                        size=10,
-                        color=ft.Colors.with_opacity(
-                            0.3, color=DraculaColors.FOREGROUND
-                        ),
-                    ),
-                    ft.Text(f"{note}", color=DraculaColors.FOREGROUND, size=16),
-                ],
-            ),
-        )
-        return conter
-
-    def displayNumbers(self, text: str, size: int = 35):
-        """用环形标示 标识出数字"""
-        result = re.findall(r"\d+|\+", text)
-        row = ft.Row(
-            wrap=True,
-            # expand=True,
-            spacing=5,
-            run_spacing=5,
-        )
-        colors = [["#d9dbdf", "#747fdf"], ["#eab425", "#fbbf24"]]
-        quan, shuzi = colors[0]
-        for key in result:
-            if key == "+":
-                quan, shuzi = colors[1]
                 continue
-            item = ft.Container(
-                content=ft.Text(
-                    value=f"{key}",
-                    size=size * 0.5,  # 字体大小约为容器的一半
-                    weight=ft.FontWeight.BOLD,
-                    color=shuzi,  # 文字建议也用金色系或对比色
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                bgcolor=ft.Colors.TRANSPARENT,  # 背景透明
-                border=ft.Border.all(1, quan),
-                width=size,
-                height=size,
-                border_radius=size / 2,
-                # padding=ft.Padding.all(5),
-                alignment=ft.Alignment.CENTER,
+            # logr.info(f'{key} {item} ==-==')
+            count_range = f"{item['range_start']} - {item['range_end']}"
+            count = item["count"]
+
+            textlist.append(
+                ft.Text(
+                    f"Section [ {key} ].  Choose {count} number from {count_range}.",
+                    max_lines=2,
+                    color=DraculaColors.PURPLE,
+                    size=15,
+                )
             )
-            row.controls.append(item)
-        return row
+        self.content.content.controls = textlist
+        self.update()
+
+    def __build_card(self):
+        logr.info("bulid card is running.")
+        return ft.Container(
+            padding=12,
+            # expand=True,
+            # opacity=0.65,
+            width=float("inf"),
+            border=ft.Border.all(2, DraculaColors.ORANGE),
+            border_radius=10,
+            content=ft.Column(
+                tight=True,
+                controls=[
+                    # LotteryBalls(exp, align="LE"),
+                    # ft.Divider(),
+                    # *textlist,
+                    ft.Text(
+                        "💡Please add game rules. You can customize them using [new rule] or use the preset options."
+                    ),
+                ],
+            ),
+        )
+
 
 # endregion
 
 
-
 # region DefaultSettings
-class DefaultSettings(ft.Container):
+class DefaultSettings(ft.Card):
     """默认设置指示器"""
 
     def __init__(self):
         super().__init__()
-        self.width = float("inf")
-        self.border = ft.Border.all(
-            1, ft.Colors.with_opacity(0.6, DraculaColors.COMMENT)
-        )
-        self.bgcolor = ft.Colors.with_opacity(0.4, DraculaColors.COMMENT)
-        self.border_radius = 10
         self.content = self.__build_card()
         # self.apply_rule = {}
         self.render_filters = None
@@ -557,7 +437,15 @@ class DefaultSettings(ft.Container):
         if self.running:
             await asyncio.sleep(0.5)
 
-            button_list = []
+            add_rule = ft.Button(
+                bgcolor=DraculaColors.GREEN,
+                color=DraculaColors.BACKGROUND,
+                icon=ft.Icons.RULE,
+                content="new rule",
+                tooltip=ft.Tooltip(message="new game rule"),
+                on_click=self.handle_add_rule,
+            )
+            button_list = [add_rule]
 
             # 注意：Lotter_Data 应该在函数外部定义或作为参数传入
             for k, item in Lotter_Data.items():
@@ -567,12 +455,13 @@ class DefaultSettings(ft.Container):
                         content=f"{k}",
                         tooltip=ft.Tooltip(message=description),
                         # 【重要】使用默认参数 data=item 来破解 Lambda 闭包陷阱
-                        on_click=lambda e, name=k, data=item, desc=description: (
-                            self.save_preset_to_file(name, data, desc)
-                        ),
+                        on_click=lambda e,
+                        name=k,
+                        data=item,
+                        desc=description: self.save_preset_to_file(name, data, desc),
                     )
                 )
-            self.defrow.controls = button_list
+            self.content.content.controls = button_list
             self.update()
 
     def handle_add_rule(self, e):
@@ -618,72 +507,116 @@ class DefaultSettings(ft.Container):
         if self.render_filters:
             self.render_filters()
 
-    async def Regenerate_handle_click(self, e):
-        id = f"{randomData.generate_secure_string(8)}"
-        self.stored_id = os.path.join(app_temp_path, f"gen_{id}.dict")
-        filePath = pathlib.Path(self.stored_id)
-        for item in filePath.parent.iterdir():
-            if (
-                item.is_file() or item.is_symlink() and item.name.startswith("gen_")
-            ):  # 确保只删除文件
-                logr.info(f"Regenerate_id Delete {item.name}.")
-                item.unlink()
-        filePath.parent.mkdir(parents=True, exist_ok=True)
-        filePath.write_text("")
-        self.page.show_dialog(ft.SnackBar(f"Regenerate id {id}"))
+    def __build_card(self):
+        return ft.Container(
+            padding=12,
+            width=float("inf"),
+            border=ft.Border.all(2, DraculaColors.COMMENT),
+            border_radius=10,
+            content=ft.Row(
+                controls=[],
+                spacing=2,
+                run_spacing=2,
+                wrap=True,
+                alignment=ft.MainAxisAlignment.START,
+            ),
+        )
+
+
+# endregion
+
+
+# region UserDirectory
+class UserDirectory(ft.Card):
+    """用户目录指示器"""
+
+    __name__ = "UserDirectory"
+
+    def __init__(self):
+        super().__init__()
+        self.file_picker = ft.FilePicker()
+        self.stored_id = None
+        self.tips = ft.Text(
+            "💡 Tip: The app saves the filter path by default.",
+            color=DraculaColors.FOREGROUND,
+            size=16,
+            max_lines=2,
+            # overflow=ft.TextOverflow.ELLIPSIS,
+            no_wrap=False,
+        )
+        self.clear_id = ft.Button(
+            "Clean up ID",
+            icon=ft.Icons.ACCOUNT_CIRCLE,
+            color=DraculaColors.PINK,
+            style=ft.ButtonStyle(
+                side=ft.BorderSide(width=1, color=DraculaColors.PINK),
+            ),
+            on_click=lambda _: self.clean_up_id(),
+        )
+        self.content = self.__build_card()
+        self.count = 10
+
+    def did_mount(self):
+        self.running = True
+        try:
+            if not self.stored_id:
+                self.page.run_task(self.Checking_user_id)
+        except Exception as er:
+            logr.error(f"{self.__name__} running error.", {er})
+        finally:
+            logr.info(f"{self.__name__} running over.")
+
+    def will_unmount(self):
+        self.running = False
 
     def __build_card(self):
-        self.defrow = ft.Row(
-            controls=[],
-            spacing=2,
-            run_spacing=2,
-            wrap=True,
-            alignment=ft.MainAxisAlignment.START,
+        return ft.Container(
+            padding=12,
+            # width=200,
+            width=float("inf"),
+            border=ft.Border.all(2, DraculaColors.COMMENT),
+            border_radius=10,
+            content=ft.Row(
+                controls=[
+                    self.tips,
+                    self.clear_id,
+                ],
+                spacing=5,
+                wrap=True,
+                # tight=True,
+                alignment=ft.MainAxisAlignment.START,
+            ),
         )
-        add_rule = ft.Button(
-            bgcolor=DraculaColors.GREEN,
-            color=DraculaColors.BACKGROUND,
-            icon=ft.Icons.ADD_CIRCLE_OUTLINE,
-            content="new rule",
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-            tooltip=ft.Tooltip(message="new game rule"),
-            on_click=self.handle_add_rule,
-        )
-        Regenerate = ft.Button(
-            bgcolor=ft.Colors.with_opacity(0.7, RandColor()),
-            color=DraculaColors.BACKGROUND,
-            icon=ft.Icons.REFRESH,
-            content="Regenerate",
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-            tooltip=ft.Tooltip(message="ID Regeneration"),
-            on_click=self.Regenerate_handle_click,
-        )
-        uibuttens = ft.Column(
-            spacing=0,
-            controls=[
-                ft.Container(
-                    padding=12,
-                    border_radius=10,
-                    bgcolor=ft.Colors.with_opacity(0.5, DraculaColors.CRADBG),
-                    border=ft.Border(
-                        bottom=ft.BorderSide(
-                            1, ft.Colors.with_opacity(0.4, DraculaColors.COMMENT)
-                        ),  # 宽度为 3, 颜色为蓝色
-                    ),
-                    width=float("inf"),
-                    content=self.defrow,
-                ),
-                ft.Container(
-                    padding=ft.Padding(12, 5, 12, 5),
-                    bgcolor=ft.Colors.TRANSPARENT,
-                    content=ft.Row(
-                        controls=[Regenerate, add_rule],
-                        alignment=ft.MainAxisAlignment.END,
-                    ),
-                ),
-            ],
-        )
-        return uibuttens
+
+    async def update_tips_value(self, text: str = None):
+        if not text:
+            return
+        self.tips.value = f"{text}"
+        self.tips.update()
+        await asyncio.sleep(2)
+
+    async def Checking_user_id(self):
+        if self.running:
+            await asyncio.sleep(0.5)  # 初始延迟，确保页面加载完成
+            temp = await ft.SharedPreferences().get("stored_id")
+            if temp:
+                self.stored_id = temp
+                logr.info(f"Found Storage id: {temp}")
+            else:
+                id = f"{randomData.generate_secure_string(8)}"
+                self.stored_id = os.path.join(app_temp_path, f"{id}.dict")
+                await ft.SharedPreferences().set("stored_id", self.stored_id)
+                self.clean_up_id()
+            showid = os.path.splitext(os.path.basename(self.stored_id))[0]
+            await self.update_tips_value(f"Using {showid}")
+
+    def clean_up_id(self):
+        if not self.stored_id:
+            return
+        filePath = pathlib.Path(self.stored_id)
+        filePath.parent.mkdir(parents=True, exist_ok=True)
+        filePath.write_text("")
+        logr.info(f"clean_up_id is over.")
 
 
 # endregion
@@ -693,11 +626,13 @@ class DefaultSettings(ft.Container):
 class SetingsPage:
     """设置页面类"""
 
-    def __init__(self):
-        self.rule_mode_show = showRulev2()
+    def __init__(self, page: ft.Page):
+        self.page = page
+
+        self.rule_mode_show = showRule()
         self.uese_input_mode = input_user_rule()
         self.default_setings = DefaultSettings()
-        # self.User_Directory = UserDirectory()
+        self.User_Directory = UserDirectory()
         self.apply_rule = {}
 
         self.uese_input_mode.setting_render_filters(self.render_filters)
@@ -731,31 +666,29 @@ class SetingsPage:
     def render_filters(self):
         """渲染过滤器列表"""
         self.rule_mode_show.updateCard()
+        self.page.update()
 
     def open_dialog(self):
         self.uese_input_mode.openCard()
+        # self.dlg.open = True
+        self.page.update()
 
     def get_seting_view(self):
         return ft.Column(
             controls=[
-                # ft.Image(
-                #     src="setting.png",
-                #     fit=ft.BoxFit.FIT_HEIGHT,
-                #     width=475 * 0.45,
-                #     height=135 * 0.45,
-                # ),
-                ft.Text(
-                    "Setting",
-                    size=25,
-                    weight="bold",
-                    color=DraculaColors.COMMENT,
-                    font_family="RacingSansOne-Regular",
+                ft.Image(
+                    src="setting.png",
+                    fit=ft.BoxFit.FIT_HEIGHT,
+                    width=475 * 0.45,
+                    height=135 * 0.45,
                 ),
+                # ft.Text("Setting", size=25, weight="bold", color=DraculaColors.COMMENT),
                 # 这里可以添加更多的设置控件
                 ft.Divider(),
                 # ft.Row(controls=self.buttons, scroll=ft.ScrollMode.HIDDEN, expand=True),
                 # ft.Divider(),
                 self.rule_mode_show,
+                self.User_Directory,
                 self.default_setings,
                 self.uese_input_mode,
             ],

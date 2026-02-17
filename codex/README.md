@@ -41,3 +41,51 @@ uv pip sync requirements.txt
 ```bash
 base64 -i lotter.jks | tr -d '\n'
 ```
+
+#### debug apk
+```bash
+adb logcat -v color serious_python:V '*:S'
+--------- beginning of main
+02-03 09:53:36.833 18799 18836 I serious_python: ERROR handle_Save error: None. LateInitializationError: Field '_instance@394507694' has not been initialized.
+02-03 09:53:36.833 18799 18836 I serious_python: Traceback (most recent call last):
+02-03 09:53:36.833 18799 18836 I serious_python:   File "/data/user/0/com.flet.lotter/files/flet/app/Customs/filter.py", line 766, in handle_Save
+02-03 09:53:36.833 18799 18836 I serious_python:     save_path = await ft.FilePicker().save_file(
+02-03 09:53:36.833 18799 18836 I serious_python:                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+02-03 09:53:36.833 18799 18836 I serious_python:   File "/data/user/0/com.flet.lotter/files/flet/python_site_packages/flet/controls/services/file_picker.py", line 241, in save_file
+```
+
+#### podman font-family
+- ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji"
+- ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace
+
+##### fix
+```bash
+fc-match monospace
+DejaVuSansMono.ttf: "DejaVu Sans Mono" "Book"
+```
+##### 修复方案
+1. ~/.config/fontconfig/conf.d/99-podman-fonts.conf 创建这个文件
+2. 文件内容如下
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+    <!-- 当程序请求 monospace 时，强制优先使用 Source Code Pro -->
+    <match target="pattern">
+        <test qual="any" name="family"><string>monospace</string></test>
+        <edit name="family" mode="prepend" binding="strong">
+            <string>Source Code Pro</string>
+        </edit>
+    </match>
+</fontconfig>
+
+```
+
+#### flet load res
+- https://gitee.com/jogfeelingvi/lotter_resource/raw/main/fonts/CaveatBrush-Regular.ttf
+- https://github.com/JogFeelingVI/lotter_resource/raw/refs/heads/main/fonts/CaveatBrush-Regular.ttf
+- https://github.com/JogFeelingVI/lotter_resource/raw/refs/heads/main/fonts/Retro%20Floral.ttf
+- https://github.com/JogFeelingVI/lotter_resource/raw/refs/heads/main/fonts.json
+- https://gitee.com/jogfeelingvi/lotter_resource/raw/main/fonts.json
+

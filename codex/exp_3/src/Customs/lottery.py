@@ -2,17 +2,17 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-01 04:45:08
-
+# @Last Modified time: 2026-02-17 14:57:48
 
 from .jackpot_core import randomData, filter_for_pabc
-from .SnackBar import get_snack_bar
-from .DraculaTheme import DraculaColors
+from .DraculaTheme import DraculaColors, RandColor
 from .loger import logr
 import flet as ft
 import datetime
 import os
 import asyncio
+import time
+import re
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
@@ -20,7 +20,7 @@ jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
 
 # region serendipitousCapture
-class serendipitousCapture(ft.Card):
+class serendipitousCapture(ft.Container):
     """创建一个控件 用来使用列表拍照"""
 
     def __init__(self):
@@ -28,15 +28,22 @@ class serendipitousCapture(ft.Card):
         self.get_exp_all = None
         self.scshot = self.__build_exp()
         self.tips = self.__build_tips()
+
         self.content = self.__build__Container()
         self.visible = False
-        self.savePng = ft.FilePicker()
+        self.padding = 12
+        self.width = float("inf")
+        self.border = ft.Border.all(
+            1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
+        )
+        self.border_radius = 10
 
     def setting_get_exp_all(self, getexpall: list = None):
         self.get_exp_all = getexpall
 
     def did_mount(self):
         self.running = True
+        # self.setting_width()
 
     def will_unmount(self):
         self.running = False
@@ -50,28 +57,53 @@ class serendipitousCapture(ft.Card):
         for i in range(1, 4):
             await self.update_tips(f"The window will close in {3 - i} seconds.")
 
+    # region add_exp
     async def add_exp(self, exp: list = None, genid: str = None):
-        if not exp:
+        if not exp or not genid:
             return
-        exp_show = self.scshot.content.content
-        if not isinstance(exp_show, ft.Column):
-            return
-        if not genid:
-            return
-        esc = [x for x in exp_show.controls if x.data == "biaoyu"]
-        esc.append(ft.Divider(color="#7b0000"))
-        for i, _e in enumerate(exp):
-            esc.append(
-                ft.Text(
-                    value=f"{chr(65 + i)}: {_e}",
-                    size=18,
-                    color="#900015" if i % 2 == 0 else "#d7a700",
-                    weight="bold",
-                )
+
+        def eTotext(text: str = "", i=0):
+            if text not in ["", None]:
+                text = f"{chr(65 + i)}: {_e}"
+                color = "#E70224" if i % 2 == 0 else "#d7a700"
+                size = 18
+                weight = ft.FontWeight.BOLD
+                font_family = "RacingSansOne-Regular"
+            else:
+                text = "Billionaire!"
+                color = ft.Colors.with_opacity(0.3, "#FFFFFF")
+                size = 12
+                weight = ft.FontWeight.W_100
+                font_family = None
+            return ft.Text(
+                value=text,
+                size=size,
+                color=color,
+                weight=weight,
+                font_family=font_family,
             )
-            if (i + 1) % 5 == 0:
-                esc.append(ft.Divider(color=ft.Colors.TRANSPARENT))
-        esc.append(ft.Divider(color="#7b0000"))
+
+        esc = [x for x in self.showNumbers.controls if x.data == "biaoyu"]
+        cols = []
+        for i, _e in enumerate(exp):
+            #! _e is row
+            cols.append(eTotext(_e, i))
+            if (i + 1) % 5 == 0 and (i + 1) < len(exp):
+                cols.append(eTotext("", i))
+        esc.append(
+            ft.Container(
+                content=ft.Column(
+                    tight=True,
+                    spacing=10,
+                    controls=cols,
+                ),
+                # 【关键】用 Container 的底边框代替 Divider
+                border=ft.border.only(
+                    bottom=ft.BorderSide(2, "#7b0000"), top=ft.BorderSide(2, "#7b0000")
+                ),
+                padding=ft.padding.only(bottom=10, top=10, left=5, right=5),
+            )
+        )
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         esc.append(
             ft.Text(
@@ -80,10 +112,14 @@ class serendipitousCapture(ft.Card):
                 color="#7b0000",
             )
         )
-        exp_show.controls = esc
-        exp_show.update()
+        self.showNumbers.controls = esc
+        self.showNumbers.update()
 
+    # endregion
+
+    # region schot_exp_capture
     async def schot_exp_capture(self):
+        """外部函数调用 并执行截图"""
         try:
             self.visible = True
             self.update()
@@ -101,36 +137,58 @@ class serendipitousCapture(ft.Card):
             genid = randomData.generate_secure_string(8)
             await self.add_exp(exp_all, genid)
 
-            # 4. 【非常重要】截图控件必须先添加到页面上
-            # 我们把它放到 overlay 中，这样它就存在于页面树中，但不会破坏现有布局
+            is_mobile_or_web = self.page.web or self.page.platform in [
+                ft.PagePlatform.ANDROID,
+                ft.PagePlatform.IOS,
+            ]
+
             image = await self.scshot.capture()
-            stored_id = await ft.SharedPreferences().get("stored_id")
-            id = os.path.splitext(os.path.basename(stored_id))[0]
-            png_name = f"{id}.png"
-            # png_path =  os.path.join(app_temp_path, png_name)
-            save_png = await self.savePng.save_file(
-                dialog_title=f"Save as {png_name} file.",
+            png_name = f"{genid}.png"
+            logr.info(f"{image.__sizeof__()=} {png_name=}")
+
+            save_png = await ft.FilePicker().save_file(
+                file_type=ft.FilePickerFileType.CUSTOM,
                 allowed_extensions=["png"],
                 file_name=png_name,
                 src_bytes=image,
             )
-            if save_png:
+            logr.info(f"save_path: {save_png}")
+            if save_png and not is_mobile_or_web:
                 with open(save_png, "wb") as f:
                     f.write(image)
-            await self.update_tips(f"Storage file directory {png_name}.")
+                await self.update_tips(f"Storage file directory {png_name}.")
             await self.update_tips(f"Storage task completed.")
 
         except Exception as er:
-            logr.info(f"Capture error.", er)
+            logr.info(f"Capture error. {er}")
         finally:
             self.visible = False
             await self.espcap_windows()
             self.update()
 
+    # endregion
+
     def __build_tips(self):
         return ft.Text("save to ...", size=16, color=DraculaColors.ORANGE)
 
     def __build_exp(self):
+        self.showNumbers = ft.Column(
+            tight=True,
+            spacing=0,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            # horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+            controls=[
+                ft.Text(
+                    "Jackpot Lotter",
+                    size=25,
+                    weight="bold",
+                    font_family="RacingSansOne-Regular",
+                    color="#7b0000",
+                    italic=True,
+                    data="biaoyu",
+                ),
+            ],
+        )
         return ft.Screenshot(
             content=ft.Container(
                 foreground_decoration=ft.BoxDecoration(
@@ -145,106 +203,107 @@ class serendipitousCapture(ft.Card):
                 bgcolor="#1f1f1f",
                 border_radius=5,
                 padding=10,
-                content=ft.Column(
-                    spacing=5,
-                    controls=[
-                        ft.Text(
-                            "May your cup overflow with blessings and your coffers with gold.",
-                            size=16,
-                            color="#7b0000",
-                            italic=True,
-                            data="biaoyu",
-                        ),
-                    ],
-                ),
-            ),
+                content=self.showNumbers,
+            )
         )
 
     def __build__Container(self):
         # 注意：这里 self.exp_list 已经是字符串或列表，逻辑保持你的不变
-        return ft.Container(
-            padding=12,
-            width=float("inf"),
-            # width=600,
-            border=ft.Border.all(2, DraculaColors.ORANGE),
-            border_radius=10,
-            content=ft.Column(
-                controls=[
-                    self.scshot,
-                    ft.Divider(),
-                    self.tips,
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
-                tight=True,
-            ),
+        content = ft.Column(
+            controls=[
+                self.scshot,
+                ft.Divider(),
+                self.tips,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            tight=True,
         )
+        return content
 
 
 # endregion
 
 
-# region ItemC2
-class ItemC2(ft.GestureDetector):
-    """支持左右滑动操作的项目条目"""
-
+# region itemC2plus
+class itemC2plus(ft.Container):
     def __init__(self):
         super().__init__()
-
-        # 用于记录累积的滑动距离
-        self.drag_accumulated = 0
-        # 触发动作的阈值（滑动超过 100 像素则触发）
-        self.threshold = 100
+        self.timeout = 30
+        self.threshold = 120
         self.is_refreshing = False
         self.running = False
         self.state_exp = "none"  # "ref" "done"
         self.Itemc2_remove = None
+        self.fontSize = 25
+        self.selected = False
+        # 参数
 
-        self.red_glow = ft.BoxShadow(
-            blur_radius=25,  # 阴影模糊程度（数值越大越柔和）
-            spread_radius=2,  # 阴影扩散范围
-            color=ft.Colors.with_opacity(0.6, ft.Colors.RED),  # 红色半透明
-            blur_style=ft.BlurStyle.NORMAL,
+        self.padding = 15
+        self.border_radius = 10
+        self.border = ft.Border.all(
+            1, ft.Colors.with_opacity(0.2, DraculaColors.FOREGROUND)
         )
+        self.bgcolor = ft.Colors.with_opacity(0.2, RandColor())
+        self.content = self.__build_content()
 
-        self.blue_glow = ft.BoxShadow(
-            blur_radius=25,  # 阴影模糊程度（数值越大越柔和）
-            spread_radius=2,  # 阴影扩散范围
-            color=ft.Colors.with_opacity(0.6, ft.Colors.BLUE),  # 红色半透明
-            blur_style=ft.BlurStyle.NORMAL,
+    def __build_tips(self):
+        self.tips = ft.Text(
+            value="Please wait...",
+            no_wrap=True,
+            size=13,
+            color=ft.Colors.with_opacity(0.5, DraculaColors.FOREGROUND),
         )
-
-        # 1. 构建内部显示的 Chip
-        self.chip_content = ft.Text(
-            "03 07 11 17 29 30 + 09", size=20, color=DraculaColors.PURPLE
+        conta = ft.Container(
+            content=self.tips,
+            alignment=ft.Alignment.CENTER_RIGHT,
+            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+            # border=ft.Border.only(
+            #     left=ft.BorderSide(5, ft.Colors.RED)  # 宽度为5的红色左边框
+            # ),
+            padding=ft.Padding.only(left=5),
+            # 动画配置
+            width=200,
         )
-        self.chip = ft.Chip(
-            width=float("inf"),
-            label=ft.Container(
-                content=self.chip_content,
-                alignment=ft.Alignment.CENTER_LEFT,
-                expand=True,
-                animate=ft.Animation(300, ft.AnimationCurve.DECELERATE),
-            ),
-            shape=ft.RoundedRectangleBorder(
-                side=ft.BorderSide(width=1, color=DraculaColors.CURRENT_LINE), radius=8
-            ),
-            # bgcolor=DraculaColors.CURRENT_LINE,  # 替换为你的 DraculaColors.CURRENT_LINE
-            selected_color=ft.Colors.TRANSPARENT,
-            check_color=DraculaColors.ORANGE,
-            delete_icon_color=DraculaColors.RED,
-            on_delete=self.handle_delete,
-            on_select=self.handle_select,  # 处理点击事件
-            # 注意：在 GestureDetector 下，Chip 的 on_select 可能会干扰手势，
-            # 建议点击事件统一由 GestureDetector 处理
+        return conta
+
+    def tips_value(self, value: str, color: str = DraculaColors.FOREGROUND):
+        self.tips.value = f"{value}"
+        self.tips.color = ft.Colors.with_opacity(0.5, color)
+        self.tips.tooltip = ft.Tooltip(message=f"{value}")
+        # self.tips.update()
+
+    def displayNumbers(self, text: str, size: int = 35):
+        """用环形标示 标识出数字"""
+        result = re.findall(r"\d+|\+", text)
+        row = ft.Row(
+            wrap=False,
+            scroll=ft.ScrollMode.HIDDEN,
+            expand=True,
+            spacing=5,
         )
-
-        # 2. 设置 GestureDetector 的属性
-        self.content = self.chip
-        self.on_horizontal_drag_update = self.handle_drag_update
-        self.on_horizontal_drag_end = self.handle_drag_end
-
-    def setting_Itemc2_Remove(self, itemc2remove=None):
-        self.Itemc2_remove = itemc2remove
+        colors = [["#d9dbdf", "#747fdf"], ["#eab425", "#fbbf24"]]
+        quan, shuzi = colors[0]
+        for key in result:
+            if key == "+":
+                quan, shuzi = colors[1]
+                continue
+            item = ft.Container(
+                content=ft.Text(
+                    value=f"{key}",
+                    size=size * 0.5,  # 字体大小约为容器的一半
+                    weight=ft.FontWeight.BOLD,
+                    color=shuzi,  # 文字建议也用金色系或对比色
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                bgcolor=ft.Colors.TRANSPARENT,  # 背景透明
+                border=ft.Border.all(1, quan),
+                width=size,
+                height=size,
+                border_radius=size / 2,
+                alignment=ft.Alignment.CENTER,
+            )
+            row.controls.append(item)
+        return row
 
     def did_mount(self):
         if not self.running and not self.is_refreshing and self.state_exp != "done":
@@ -253,54 +312,154 @@ class ItemC2(ft.GestureDetector):
     def will_unmount(self):
         self.running = False
 
+    def __build__badge(self, size: int = 20, text: str = "111"):
+        self.buildBadge = ft.Container(
+            content=ft.Text(
+                f"{text}",
+                size=size * 0.5,
+                weight="bold",
+                color=DraculaColors.FOREGROUND,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            padding=ft.Padding(8, 5, 8, 5),
+            # width=size,
+            # height=size,
+            bgcolor=DraculaColors.RED,
+            border_radius=size / 2,  # 半径设为宽高的一半即为正圆
+            # alignment=ft.Alignment.CENTER,  # 确保图标在内部居中
+        )
+        return self.buildBadge
+
+    def __build_check(self, size: int = 30):
+        def toggle_icon(e):
+            # 切换选中状态
+            if self.state_exp != "done":
+                return
+            # e.control.selected = not e.control.selected
+            # e.control.update()
+            self.selected = not self.selected
+            self.check.bgcolor = DraculaColors.GREEN if self.selected else None
+            self.check.update()
+            logr.info(f"{self.selected}")
+            # end
+
+        self.check = ft.Container(
+            padding=5,
+            content=ft.Icon(
+                ft.Icons.CHECK, color=DraculaColors.FOREGROUND, size=size * 0.6
+            ),
+            width=size,
+            height=size,
+            border_radius=size / 2,
+            alignment=ft.Alignment.CENTER,
+            on_click=toggle_icon,
+        )
+        return self.check
+
+    def __build_Butter(self, size=30, icon=ft.Icons.REFRESH, onclick=None):
+        butter = ft.Container(
+            # padding=5,
+            content=ft.Icon(icon, color=DraculaColors.FOREGROUND, size=size),
+            # width=size,
+            # height=size,
+            # border_radius=size / 2,
+            # alignment=ft.Alignment.CENTER,
+            on_click=onclick,
+        )
+        return butter
+
+    def __build_content(self):
+        content = ft.Column(
+            spacing=0,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    expand=1,
+                    controls=[
+                        shownumber := self.displayNumbers("05 06 07"),
+                        self.__build_check(),
+                    ],
+                ),
+                ft.Row(
+                    expand=1,
+                    spacing=5,
+                    alignment=ft.MainAxisAlignment.END,
+                    controls=[
+                        self.__build_tips(),
+                        self.__build_Butter(
+                            30, ft.Icons.REFRESH, self.handle_refresh_data
+                        ),
+                        self.__build_Butter(
+                            30, ft.Icons.DELETE_FOREVER, self.handle_delete
+                        ),
+                        self.__build__badge(text="0"),
+                    ],
+                ),
+            ],
+        )
+        self.showNumber = shownumber
+        return content
+
+    def setting_Itemc2_Remove(self, itemc2remove=None):
+        self.Itemc2_remove = itemc2remove
+
     def refresh(self, name: str = "None"):
-        if self.is_refreshing or self.chip.selected:
+        if self.is_refreshing or self.selected:
             return
         # logr.info(f"markdata is running. {name}")
         self.page.run_task(self.SearchForData, name)
 
+    # region SearchForData
     async def SearchForData(self, name: str):
         logr.info(f"SearchForData {name}")
         self.is_refreshing = True
         count = 0
-        max_retries = 100
+        time
         await asyncio.sleep(0.5)
+        start_time = time.time()
         try:
-            while count < max_retries:
+            while True:
                 # 1. 使用 to_thread 运行耗时计算，防止界面卡死
                 # 假设 calculate_lottery 是普通的同步函数
                 # tempd, state = await asyncio.to_thread(self.calculate_lottery)
                 tempd, state = await asyncio.to_thread(self.calculate_lottery)
                 if state:
                     # 成功情况
-                    self.chip_content.value = tempd
-                    self.chip_content.color = DraculaColors.PURPLE
+                    self.tempd = tempd
+                    self.showNumber.controls = self.displayNumbers(tempd).controls
+                    self.tips_value("Search successful.", DraculaColors.GREEN)
                     self.state_exp = "done"
                     self.update()
-                    logr.info("Search successful")
                     break  # 成功后直接跳出循环
                 else:
                     # 失败但未达到上限，更新 UI 并稍作等待
-                    self.chip_content.value = tempd
-                    self.chip_content.color = DraculaColors.ORANGE
+                    self.showNumber.controls = self.displayNumbers(tempd).controls
+                    # self.showNumber.color = DraculaColors.ORANGE
+                    self.buildBadge.content.value = f"{count}"
+                    self.tips_value(
+                        "We are searching diligently, please wait...",
+                        DraculaColors.ORANGE,
+                    )
                     self.state_exp = "ref"
                     self.update()
-                    await asyncio.sleep(0.3)  # 给 CPU 喘息时间，也让 UI 有机会渲染
+                    await asyncio.sleep(0.1)  # 给 CPU 喘息时间，也让 UI 有机会渲染
                 count += 1
-                if count >= max_retries:
-                    logr.info("count is max_retries, work stoping.")
-                    self.chip_content.value = (
-                        "Please swipe right to restart."  # 显示错误/超时界面
+                elapsed_time = time.time() - start_time
+                if elapsed_time >= self.timeout:
+                    self.tips_value(
+                        "Count is max_retries, work stoping.", DraculaColors.RED
                     )
-                    self.chip_content.color = DraculaColors.RED
                     self.state_exp = "none"
                     self.update()
                     break
         except Exception as e:
-            self.chip_content.value = "Find data errors."  # 显示错误/超时界面
+            # 显示错误/超时界面
+            self.tips_value("Program execution error.", DraculaColors.YELLOW)
             self.update()
         finally:
             self.is_refreshing = False
+
+    # endregion
 
     def calculate_lottery(self):
         settings = self.page.session.store.get("settings")
@@ -308,151 +467,108 @@ class ItemC2(ft.GestureDetector):
         if settings:
             rd = randomData(seting=settings["randomData"])
         else:
-            return ("No Numbers", False)
+            return ("No settings", False)
         result = rd.get_pabc()
         if not filters:
             return (rd.get_exp(result), True)
         filter_jp = filter_for_pabc(filters=filters)
         if filter_jp.handle(result) == False:
-            return [rd.get_exp(result), False]
+            return (rd.get_exp(result), False)
         return (rd.get_exp(result), True)
 
-    def handle_drag_update(self, e: ft.DragUpdateEvent):
-        # 累加滑动距离 (e.primary_delta 在水平滑动时是 x 轴的变化量)
-        self.drag_accumulated += e.primary_delta
-
-    def handle_drag_end(self, e: ft.DragEndEvent):
-        # 判断滑动方向
-        if self.drag_accumulated > self.threshold:
-            self.refresh_data()
-        elif self.drag_accumulated < -self.threshold:
-            self.save_item()
-
-        # 重置滑动计数值
-        self.drag_accumulated = 0
-
-    def refresh_data(self):
+    def handle_refresh_data(self, e):
         """右滑逻辑：刷新数据"""
         logr.info("向右滑动：正在刷新数据...")
         self.refresh(name="refresh_data")
-
-    def save_item(self):
-        """左滑逻辑：保存项目"""
-        logr.info("向左滑动：项目已保存")
-        # 这里执行你的保存逻辑
-        self.page.show_dialog(ft.SnackBar(ft.Text("项目已保存！")))
-
-    async def handle_select(self, e):
-        if self.is_refreshing:
-            self.chip.selected = False
-            return
-        if self.state_exp != "done":
-            self.chip.selected = False
-            return
-        self.chip.shape = ft.RoundedRectangleBorder(
-            side=ft.BorderSide(
-                width=1,
-                color=DraculaColors.ORANGE
-                if self.chip.selected
-                else DraculaColors.CURRENT_LINE,
-            ),
-            radius=8,
-        )
-
-        self.update()
+        self.page.show_dialog(ft.SnackBar(f"handle refresh data."))
 
     def handle_delete(self, e):
-        if self.is_refreshing or self.chip.selected:
+        if self.is_refreshing or self.selected:
             return
         if self.Itemc2_remove:
             self.Itemc2_remove(self)
-        self.chip.update()
-        logr.info("点击了删除图标")
+        self.page.show_dialog(ft.SnackBar(f"handle delete."))
 
 
 # endregion
 
 
 # region itemsList
-class itemsList(ft.Card):
+class itemsList(ft.Container):
     def __init__(self):
         super().__init__()
         self.content = self.__build_card()
         self.max_item = 10
+        self.padding = 10
+        self.width = float("inf")
+        self.bgcolor = ft.Colors.TRANSPARENT
 
     def did_mount(self):
         self.running = True
+        self.find_the_maximum()
 
     def will_unmount(self):
         self.running = False
 
-    def __build_card(self):
-        return ft.Container(
-            padding=12,
-            width=float("inf"),
-            # width=400,
-            border=ft.Border.all(2, DraculaColors.PINK),
-            border_radius=10,
-            content=self.__command_button(),
-        )
+    def find_the_maximum(self):
+        is_mobile_or_web = self.page.web or self.page.platform in [
+            ft.PagePlatform.ANDROID,
+            ft.PagePlatform.IOS,
+        ]
+        self.max_item = 10 if is_mobile_or_web else 1000
 
     def add_itemc2(self, itemc2remove=None):
-        control = self.content.content
+        control = self.content
         if not isinstance(control, ft.Column):
             logr.info(f"add_item type {type(control)}")
             return
-        itemc2_len = [x for x in control.controls if isinstance(x, ItemC2)].__len__()
+        itemc2_len = [
+            x for x in control.controls if isinstance(x, itemC2plus)
+        ].__len__()
         if itemc2_len < self.max_item:
-            temp = ItemC2()
+            temp = itemC2plus()
             temp.setting_Itemc2_Remove(itemc2remove)
             control.controls.append(temp)
-            logr.info("Add ItemC2")
+            logr.info("Add itemC2plus")
             self.update()
 
     def all_refresh(self):
         """全部刷新"""
-        control = self.content.content
+        control = self.content
         if not isinstance(control, ft.Column):
             logr.info(f"all_refresh {type(control)}")
             return
-        itemc2_all = [x for x in control.controls if isinstance(x, ItemC2)]
+        itemc2_all = [x for x in control.controls if isinstance(x, itemC2plus)]
         for item in itemc2_all:
-            if item.chip.selected == False:
+            if item.selected == False:
                 item.refresh(name="all_refresh")
 
     def get_item_exp(self):
         """"""
-        control = self.content.content
+        control = self.content
         if not isinstance(control, ft.Column):
             logr.info(f"all_refresh {type(control)}")
             return
         exp_all = [
-            x.chip_content.value
+            x.tempd
             for x in control.controls
-            if isinstance(x, ItemC2) and x.chip.selected
+            if isinstance(x, itemC2plus) and x.selected
         ]
         return exp_all
 
-    def remove_item(self, item: ItemC2):
-        control = self.content.content
+    def remove_item(self, item: itemC2plus):
+        control = self.content
         if not isinstance(control, ft.Column):
             return
         if item:
             control.controls.remove(item)
             self.update()
 
-    def __command_button(self):
+    def __build_card(self):
         """Add, Apply, Cancel"""
         return ft.Column(
             # wrap=True,
-            controls=[
-                ft.Text(
-                    "愿你所有的好运都不期而遇，愿你所有的努力都有岁月的温柔回馈。✨"
-                ),
-                ft.Text(
-                    "May all the good luck come to you unexpectedly, and may all your hard work be rewarded with the gentleness of time. 🕊️"
-                ),
-            ],
+            controls=[],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.START,
         )
@@ -462,10 +578,18 @@ class itemsList(ft.Card):
 
 
 # region commandList
-class commandList(ft.Card):
+class commandList(ft.Container):
     def __init__(self):
         super().__init__()
-        self.content = self.__build_card()
+        # self.content = self.__build_card()、
+        self.padding = 12
+        self.width = float("inf")
+        # width=400,
+        # self.border=ft.Border.all(1, DraculaColors.COMMENT)
+        self.bgcolor = ft.Colors.TRANSPARENT
+        # self.border_radius=10
+        self.content = self.__command_button()
+        # 基本属性
         self.item_list_add = None
         self.itemc2remove = None
         self.all_refresh = None
@@ -477,16 +601,6 @@ class commandList(ft.Card):
     def will_unmount(self):
         self.running = False
 
-    def __build_card(self):
-        return ft.Container(
-            padding=12,
-            width=float("inf"),
-            # width=400,
-            border=ft.Border.all(2, DraculaColors.COMMENT),
-            border_radius=10,
-            content=self.__command_button(),
-        )
-
     def setting_shot_capture(self, capture=None):
         self.shot_capture = capture
 
@@ -497,25 +611,57 @@ class commandList(ft.Card):
     def setting_all_refresh(self, all_refresh=None):
         self.all_refresh = all_refresh
 
+    def __build_butter(self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None):
+        def handle_hover(e):
+            if e.data:
+                conter.bgcolor = ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
+                conter.border = ft.Border.all(
+                    1, ft.Colors.with_opacity(0.4, DraculaColors.PURPLE)
+                )
+            else:
+                conter.bgcolor = None
+                conter.border = ft.Border.all(
+                    1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
+                )
+            conter.update()
+            # end
+
+        conter = ft.Container(
+            width=size,
+            height=size,
+            alignment=ft.Alignment.CENTER,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)),
+            border_radius=8,
+            content=ft.Column(
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=5,
+                alignment=ft.MainAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon(icon, size=size * 0.45, color=DraculaColors.PURPLE),
+                    ft.Text(
+                        value=f"{name.upper()}",
+                        size=size * 0.15,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+            ),
+            on_hover=handle_hover,
+            on_click=oncilck,
+        )
+        return conter
+
     def __command_button(self):
         """Add, Apply, Cancel"""
         return ft.Row(
             controls=[
-                ft.TextButton(
-                    key="add_close",
-                    icon=ft.Icons.INSERT_EMOTICON,
-                    content="Add",
-                    on_click=self.handle_add,
+                self.__build_butter(
+                    icon=ft.Icons.INSERT_EMOTICON, name="ADD", oncilck=self.handle_add
                 ),
-                ft.TextButton(
-                    icon=ft.Icons.REFRESH,
-                    content="Refresh",
-                    on_click=self.handle_refresh,
+                self.__build_butter(
+                    icon=ft.Icons.REFRESH, name="Refresh", oncilck=self.handle_refresh
                 ),
-                ft.TextButton(
-                    icon=ft.Icons.SAVE_AS,
-                    content="Export",
-                    on_click=self.handle_export,
+                self.__build_butter(
+                    icon=ft.Icons.SAVE_AS, name="Export", oncilck=self.handle_export
                 ),
             ],
             # 给这一行打个标签，方便以后提取数据
@@ -541,10 +687,44 @@ class commandList(ft.Card):
 # endregion
 
 
+# region luck_tips
+class lucktips(ft.Container):
+    def __init__(self):
+        super().__init__()
+        self.bgcolor = ft.Colors.TRANSPARENT
+        self.width = float("inf")
+        self.padding = 10
+        self.content = self.__build_tips()
+
+    def __build_text(self, text: str = "Luck word."):
+        return ft.Text(
+            value=f"{text}",
+            size=15,
+            color=ft.Colors.with_opacity(0.5, DraculaColors.FOREGROUND),
+            max_lines=2,
+        )
+
+    def __build_tips(self):
+        content = ft.Column(
+            controls=[
+                self.__build_text(
+                    "愿你所有的好运都不期而遇，愿你所有的努力都有岁月的温柔回馈。✨"
+                ),
+                self.__build_text(
+                    "May all the good luck come to you unexpectedly, and may all your hard work be rewarded with the gentleness of time. 🕊️"
+                ),
+            ],
+        )
+        return content
+
+
+# endregion
+
+
 # region LotteryPage
 class LotteryPage:
-    def __init__(self, page: ft.Page):
-        self.page = page
+    def __init__(self):
+
         self.itemslist = itemsList()
         self.comandlist = commandList()
         self.serendipitous_Capture = serendipitousCapture()
@@ -557,19 +737,22 @@ class LotteryPage:
             self.serendipitous_Capture.schot_exp_capture
         )
         self.comandlist.setting_all_refresh(self.itemslist.all_refresh)
+        self.luckTips = lucktips()
         self.view = self.get_data_view()
 
     # region get_data_view
     def get_data_view(self):
         return ft.Column(
             controls=[
-                ft.Image(
-                    src="lotter.png",
-                    fit=ft.BoxFit.FIT_HEIGHT,
-                    width=288 * 0.45,
-                    height=131 * 0.45,
+                ft.Text(
+                    "Lotter",
+                    size=25,
+                    weight="bold",
+                    color=DraculaColors.COMMENT,
+                    font_family="RacingSansOne-Regular",
                 ),
                 ft.Divider(),
+                self.luckTips,
                 self.itemslist,
                 self.serendipitous_Capture,
                 self.comandlist,

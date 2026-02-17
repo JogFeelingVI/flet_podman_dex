@@ -2,142 +2,38 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-17 14:52:18
+# @Last Modified time: 2026-02-02 06:44:06
 
-
+from .ColorTokenizer import Tokenizer, spiltfortarget
 from .jackpot_core import filterFunc
-from .DraculaTheme import DraculaColors, RandColor
+from .SnackBar import get_snack_bar
+from .DraculaTheme import DraculaColors
+from .jackpot_core import randomData
 from .loger import logr
 import flet as ft
 import os
 import json
+import re
 import asyncio
 import hashlib
-
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
 
-# region FilterChipV2
-class FilterChipV2(ft.Container):
-    """高度定制 chip"""
-
-    fontSize = 14
-    #! f"#{random.randint(0, 0xFFFFFF):06x}"
-
-    def __init__(self, scd: dict, ondelete=None, onclick=None):
-        self.selectColor = RandColor()
-        super().__init__(data=scd)
-        self.padding = 5
-        self.content = self.__build__content(scd)
-        self.bgcolor = self.ColorOpx(0.1)
-        self.border_radius = 8
-        # 2. 设置边框：宽度和颜色
-        self.border = ft.Border.all(1, self.ColorOpx(0.3))
-        # self.on_hover = self.handle_hover
-        self.ondelete = ondelete
-        self.onclick = onclick
-
-    def handle_right_hover(self, e):
-        if e.data:
-            self.Cright.content = ft.Icon(
-                ft.Icons.DELETE_FOREVER, color=self.ColorOpx(1)
-            )
-            self.border = ft.Border.all(1, self.ColorOpx(1))
-            self.bgcolor = self.ColorOpx(0.4)
-        else:
-            self.Cright.content = ft.Icon(ft.Icons.DELETE, color=self.ColorOpx(0.3))
-            self.border = ft.Border.all(1, self.ColorOpx(0.3))
-            self.bgcolor = self.ColorOpx(0.1)
-
-    def handle_left_hover(self, e):
-        if e.data:
-            self.border = ft.Border.all(1, self.ColorOpx(1))
-            self.bgcolor = self.ColorOpx(0.4)
-        else:
-            self.border = ft.Border.all(1, self.ColorOpx(0.3))
-            self.bgcolor = self.ColorOpx(0.1)
-
-    def handle_left_click(self, e):
-        e.control = self
-        if self.onclick:
-            self.onclick(e)
-
-    def handle_right_click(self, e):
-        e.control = self
-        if self.ondelete:
-            self.ondelete(e)
-
-    def did_mount(self):
-        self.running = True
-
-    def will_unmount(self):
-        self.running = False
-
-    def ColorOpx(self, opacity: float = 1.0):
-        return ft.Colors.with_opacity(opacity, self.selectColor)
-
-    def __build__content(self, scd: dict):
-        contents = ft.Row(
-            tight=True,
-            spacing=0,
-            controls=[
-                left := ft.Container(
-                    padding=0,
-                    content=ft.Column(
-                        tight=True,
-                        spacing=0,
-                        controls=[
-                            ft.Text(
-                                value=f"{scd['func']} {scd['target']}",
-                                size=self.fontSize,
-                                weight="bold",
-                                color=self.selectColor,
-                            ),
-                            ft.Text(
-                                value=f"{scd['condition']}",
-                                size=self.fontSize - 2,
-                                color=self.selectColor,
-                            ),
-                        ],
-                    ),
-                    on_click=self.handle_left_click,
-                    on_hover=self.handle_left_hover,
-                ),
-                right := ft.Container(
-                    padding=0,
-                    on_hover=self.handle_right_hover,
-                    on_click=self.handle_right_click,
-                    content=ft.Icon(ft.Icons.DELETE, color=self.ColorOpx(0.3)),
-                ),
-            ],
-        )
-        self.Cleft = left
-        self.Cright = right
-        return contents
-
-
-# endregion
-
-
 # region FiltersList
-class FiltersList(ft.Container):
+class FiltersList(ft.Card):
     def __init__(
         self,
     ):
         super().__init__()
-        self.content = self.__command_button()
+        self.content = self.__build_card()
         self.editItemCallback = None
         self.add_closed_stat = None
         self.filtersAll_change = "none"  # add none del edit
         self.filtersAll = []
         self.filterSeed = set()
-        self.bgcolor = ft.Colors.TRANSPARENT
-        self.width = float("inf")
-        self.padding = 10
-        self.border_radius = 10
 
     def setting_edit_Callback(self, edit_item_callback=None):
         self.editItemCallback = edit_item_callback
@@ -154,12 +50,46 @@ class FiltersList(ft.Container):
     def will_unmount(self):
         self.running = False
 
+    def __build_card(self):
+        return ft.Container(
+            padding=12,
+            width=float("inf"),
+            # width=400,
+            border=ft.Border.all(2, DraculaColors.ORANGE),
+            border_radius=10,
+            content=self.__command_button(),
+        )
+
+    def targetspan(self, text: str):
+        split_wc = spiltfortarget(text)
+        spans = []
+        for ttext, color in split_wc:
+            spans.append(
+                ft.TextSpan(
+                    ttext,
+                    style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
+                )
+            )
+        return spans
+
+    def tokenspan(self, text: str):
+        segments = Tokenizer().Segment(text)
+        spans = []
+        for text, color in segments:
+            spans.append(
+                ft.TextSpan(
+                    text,
+                    style=ft.TextStyle(color=color if color else ft.Colors.WHITE),
+                )
+            )
+        return spans
+
     def addFilter(self, scriptd: dict):
         _scd = scriptd.copy()
         if "" in _scd.values():
             logr.info(f"add filter error {_scd}.")
             return
-        if not isinstance(self.content, ft.Row):
+        if not isinstance(self.content.content, ft.Row):
             return
 
         # hash 确认
@@ -182,10 +112,10 @@ class FiltersList(ft.Container):
         if hashcode(_scd, "is") == False:
             return
 
-        controls = self.content.controls
+        controls = self.content.content.controls
 
         def deleteForE(e):
-            if not isinstance(e.control, ft.Container):
+            if not isinstance(e.control, ft.Chip):
                 return
             e_chip = e.control
             e_script = e.control.data
@@ -195,9 +125,7 @@ class FiltersList(ft.Container):
             self.filtersAll_change = "del"
 
         def editForE(e):
-            if self.filtersAll_change == "edit":
-                return
-            if not isinstance(e.control, ft.Container):
+            if not isinstance(e.control, ft.Chip):
                 return
             e_chip = e.control
             e_script = e.control.data
@@ -214,86 +142,64 @@ class FiltersList(ft.Container):
 
         self.filtersAll.append(_scd)
         controls.append(
-            # region addend chip
-            # FilterChip(_scd, deleteForE, editForE)
-            FilterChipV2(_scd, deleteForE, editForE)
-            # endregion
+            ft.Chip(
+                data=_scd,
+                label=ft.Column(
+                    spacing=0,
+                    controls=[
+                        ft.Text(
+                            spans=self.targetspan(f"{_scd['func']} {_scd['target']}"),
+                            size=14,
+                        ),
+                        ft.Text(spans=self.tokenspan(f"{_scd['condition']}"), size=14),
+                    ],
+                ),
+                # leading=ft.Icon(ft.Icons.FILTER_ALT),
+                label_padding=ft.Padding.only(left=3),
+                padding=3,
+                delete_icon=ft.Container(
+                    content=ft.Icon(
+                        ft.Icons.DELETE_FOREVER,
+                        color=DraculaColors.RED,
+                        size=20,
+                        margin=0,
+                    ),
+                    margin=ft.Margin.all(0),
+                    padding=0,
+                ),
+                # delete_icon_color=DraculaColors.RED,
+                on_delete=deleteForE,
+                on_click=editForE,
+            )
         )
         self.filtersAll_change = "add"
-        self.content.update()
+        self.content.content.update()
         self.filter_data_task()
 
     def filter_data_task(self):
         # self.page.session.store.set("filters", fiter_data)
         self.page.session.store.set("filters", self.filtersAll)
 
-    def Custom_Switch(self, onswitch=None):
-        """Custom Switch"""
-        width = 35
-        heigth = 20
-
-        active_color = "#50fa7b"
-        default_color = "#a3a3a3"
-
-        def toggle_switch(e):
-            if switch.data == "def":
-                switch.data = "act"
-                switch.alignment = ft.Alignment.CENTER_RIGHT
-                switch.border = ft.Border.all(
-                    1, ft.Colors.with_opacity(0.8, active_color)
-                )
-                handle.bgcolor = ft.Colors.with_opacity(0.8, active_color)
-            else:
-                switch.data = "def"
-                switch.alignment = ft.Alignment.CENTER_LEFT
-                switch.border = ft.Border.all(
-                    1, ft.Colors.with_opacity(0.6, default_color)
-                )
-                handle.bgcolor = ft.Colors.with_opacity(0.8, default_color)
-            # end
-            if onswitch:
-                onswitch(switch)
-
-        handle = ft.Container(
-            width=14,
-            height=14,
-            border_radius=3,
-            bgcolor=ft.Colors.with_opacity(0.8, default_color),
-        )
-        switch = ft.Container(
-            data="def",
-            width=width,
-            height=heigth,
-            padding=3,
-            border_radius=5,
-            alignment=ft.Alignment.CENTER_LEFT,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.6, default_color)),
-            animate=ft.Animation(500, "decelerate"),
-            bgcolor=ft.Colors.TRANSPARENT,
-            content=handle,
-            tooltip=ft.Tooltip(message="It saves automatically every 20 seconds."),
-            on_click=toggle_switch,
-        )
-
-        return switch
-
     def __command_button(self):
         """Add, Apply, Cancel"""
         return ft.Row(
             wrap=True,
             controls=[
-                ft.Row(
-                    width=float("inf"),
-                    alignment=ft.MainAxisAlignment.END,
-                    controls=[
-                        ft.Text(
-                            "Automatic save filter.",
-                            size=16,
-                            color=DraculaColors.COMMENT,
-                            italic=True,
-                        ),
-                        self.Custom_Switch(onswitch=self.handle_switch),
-                    ],
+                ft.Switch(
+                    thumb_color={
+                        ft.ControlState.DEFAULT: DraculaColors.FOREGROUND,
+                        ft.ControlState.SELECTED: DraculaColors.PINK,
+                    },
+                    track_color={
+                        ft.ControlState.DEFAULT: DraculaColors.BACKGROUND,
+                        ft.ControlState.SELECTED: DraculaColors.BACKGROUND,
+                    },
+                    track_outline_color=DraculaColors.PINK,
+                    value=False,
+                    on_change=self.handle_switch,
+                    tooltip=ft.Tooltip(
+                        message="It saves automatically every 20 seconds."
+                    ),
                 ),
                 # "Various filter commands can be added to narrow down the massive pool of phone numbers."
             ],
@@ -303,24 +209,25 @@ class FiltersList(ft.Container):
 
     def clear_all(self):
         """清空 filter 设置"""
-        row = self.content
+        row = self.content.content
         if not isinstance(row, ft.Row):
             return
-        rows = [x for x in row.controls if isinstance(x, ft.Row)]
+        rows = [x for x in row.controls if isinstance(x, ft.Switch)]
         row.controls = rows
         self.filtersAll.clear()
         self.filterSeed.clear()
         row.update()
 
     def handle_switch(self, e):
-        if not isinstance(e, ft.Container):
+        switch = e.control
+        if not isinstance(switch, ft.Switch):
             return
-        if e.data == "def":
-            e.badge = None
+        if not switch.value:
+            switch.badge = None
             return
-        self.page.run_task(self.auto_save, e, 10)
+        self.page.run_task(self.auto_save, switch, 10)
 
-    async def auto_save(self, sw: ft.Container, time: int = 10):
+    async def auto_save(self, sw: ft.Switch, time: int = 10):
         _time = time
         while _time != 0:
             await asyncio.sleep(2)
@@ -330,7 +237,7 @@ class FiltersList(ft.Container):
                 await self.saveTodict()
             if _time == 0:
                 _time = time
-            if sw.data == "def":
+            if not sw.value:
                 sw.badge = None
                 break
             sw.update()
@@ -357,22 +264,17 @@ class FiltersList(ft.Container):
 
 
 # region InputPad
-class InputPad(ft.Container):
+class InputPad(ft.Card):
     def __init__(self):
         super().__init__()
         self.applycallback = None
+        self.visible = False
         self.__FT_show = self.__load_FT_show()
+        self.content = self.__build_card()
         self.funcs_dc = {}
         self.target_pn = ["all"]
         self.pad_data = {"func": "", "target": "", "condition": ""}
         self.search_pos = 0
-        self.visible = False
-        self.padding = 0
-        self.width = float("inf")
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, DraculaColors.GREEN))
-        self.bgcolor = ft.Colors.with_opacity(0.3, DraculaColors.GREEN)
-        self.border_radius = 10
-        self.content = self.__Pad()
 
     def did_mount(self):
         self.running = True
@@ -392,7 +294,7 @@ class InputPad(ft.Container):
 
     def editePad(self, script: dict):
         """编辑模式"""
-        func_target: list = self.inputpad.content.controls
+        func_target: list = self.content.content.controls
         for item in func_target:
             match item.data:
                 case "__load_funxtarget":
@@ -406,21 +308,32 @@ class InputPad(ft.Container):
                     self.pad_data["func"] = script["func"]
                     self.pad_data["target"] = script["target"]
                     self.pad_data["condition"] = script["condition"]
+                    # logr.info(f"editPad {self.pad_data=} {text_spans[1].text=}")
                 case "__command_input":
                     if not isinstance(item, ft.TextField):
                         continue
                     item.value = script["condition"]
                 case "__apply_text":
+                    # logr.info('__apply_text.')
                     if not isinstance(item, ft.Row):
                         continue
                     if not isinstance(item.controls[0], ft.Chip):
                         continue
                     item.controls[0].label = "Click to finish editing."
-                    item.controls[0].bgcolor = DraculaColors.ORANGE
                 case _:
                     pass
         self.visible = True
         self.update()
+
+    def __build_card(self):
+        return ft.Container(
+            padding=12,
+            width=float("inf"),
+            # width=400,
+            border=ft.Border.all(2, DraculaColors.PURPLE),
+            border_radius=10,
+            content=self.__Pad(),
+        )
 
     # region quick input
     def __quick_input(self):
@@ -451,7 +364,7 @@ class InputPad(ft.Container):
             spans.append(
                 ft.Container(
                     key=f"quick_{key}",
-                    content=ft.Text(f"{key}", size=17, color=DraculaColors.PURPLE),
+                    content=ft.Text(f"{key}", size=15, color=DraculaColors.PURPLE),
                     padding=ft.Padding(5, 2, 5, 2),
                     on_click=lambda e, k=key: handle_tap(e, k),
                 )
@@ -464,46 +377,21 @@ class InputPad(ft.Container):
 
     def __Pad(self):
         """Add, Apply, Cancel"""
-        self.inputpad = ft.Container(
-            padding=12,
-            border_radius=10,
-            bgcolor=ft.Colors.with_opacity(0.6, DraculaColors.CRADBG),
-            # border=ft.Border(
-            #     top=ft.BorderSide(
-            #         1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
-            #     ),  # 宽度为 3, 颜色为蓝色
-            # ),
-            width=float("inf"),
-            content=ft.Column(
-                controls=[
-                    self.__load_funxtarget(),
-                    self.__FT_show,
-                    # ft.Divider(),
-                    self.__command_input(),
-                    # self.__shadow_input(),
-                    self.__quick_input(),
-                    # ft.Divider(),
-                    self.__apply_text(),
-                ],
-            ),
-        )
         return ft.Column(
             data="__Pad",
-            spacing=0,
             controls=[
-                ft.Container(
-                    alignment=ft.Alignment.CENTER_LEFT,
-                    padding=ft.Padding(12, 5, 12, 5),
-                    width=float("inf"),
-                    bgcolor=ft.Colors.TRANSPARENT,
-                    content=ft.Text(
-                        "💡This is a test plan designed to facilitate rapid data entry for filtering projects.",
-                        color=DraculaColors.BACKGROUND,
-                        size=12,
-                        no_wrap=False,
-                    ),
+                ft.Text(
+                    "This is a test plan designed to facilitate rapid data entry for filtering projects.",
+                    color=DraculaColors.PURPLE,
                 ),
-                self.inputpad,
+                self.__load_funxtarget(),
+                self.__FT_show,
+                ft.Divider(),
+                self.__command_input(),
+                # self.__shadow_input(),
+                self.__quick_input(),
+                ft.Divider(),
+                self.__apply_text(),
             ],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -522,6 +410,110 @@ class InputPad(ft.Container):
                 ),
             ],
         )
+
+    # region __Shadow_input
+
+    def __command_dict(self):
+        return {
+            re.compile(r"(\d+),$"): "{},",
+            re.compile(r"--$"): "z",
+            re.compile(r"--m$"): "3",
+            re.compile(r"--w$"): "{}{}{}",
+            re.compile(r"--w(\d+)$"): "{}{}{}",
+            re.compile(r"bi$"): "t",
+            re.compile(r"bit(\d+),$"): "{} ",
+            re.compile(r"mo$"): "d",
+            re.compile(r"ra$"): "nge ",
+            re.compile(r"ran$"): "ge ",
+        }
+
+    def __Automatic_append(self, numbers: list[int], format_str: str):
+        try:
+            if not numbers:
+                numbers = [0, 1, 2]
+                return format_str.format(*numbers)
+            else:
+                return format_str.format(*[x + 1 for x in numbers])
+        except:
+            numbers.append(numbers[-1] + 1)
+            return self.__Automatic_append(numbers, format_str)
+
+    def __shadow_input(self):
+        def add_quick(hint: str):
+            defquick = [x for x in self.quick_input.controls if x.key != "hint"]
+
+            new_hint = ft.Container(
+                key="hint",
+                content=ft.Text(f"{hint}", size=15, color=DraculaColors.PURPLE),
+                padding=ft.Padding(8, 2, 8, 2),
+                bgcolor=DraculaColors.CURRENT_LINE,
+                on_click=lambda _, k=hint: (
+                    setattr(
+                        self.input_field, "value", (self.input_field.value or "") + k
+                    ),
+                    self.input_field.update(),
+                ),
+            )
+            defquick.insert(0, new_hint)
+            self.quick_input.controls = defquick
+            self.quick_input.update()
+
+        def input_change(e):
+            val = self.input_field.value
+
+            # 1. 必须重置搜索位置和初始提示
+            self.search_pos = 0
+            # 2. 遍历命令库
+            for cmd_pattern, hint_template in self.__command_dict().items():
+                # 注意：cmd_pattern 应该是编译好的正则对象
+                search = cmd_pattern.search(val, pos=self.search_pos)
+
+                if search:
+                    start, end = search.span()
+                    # 3. 提取该匹配项内部或周边的数字 (根据需要调整)
+                    self.search_pos = end
+                    numbers = [int(x) for x in re.findall(r"\d+", val[start:end])]
+
+                    # 4. 尝试格式化提示
+                    try:
+                        formatted_hint = self.__Automatic_append(numbers, hint_template)
+                        # 5. 组合影子文字 (Prefix + Hint + Suffix)
+                        # self.hint_text.value = val[:start] + formatted_hint + val[end:]
+                        # self.input_field.suffix = formatted_hint
+                        logr.info(f"{formatted_hint=}")
+                        add_quick(formatted_hint)
+                        break  # 找到第一个匹配就退出，避免冲突
+                    except Exception as er:
+                        logr.error(f"Format error. {er}",exc_info=True)
+
+            self.pad_data["condition"] = val.strip()
+
+        self.input_field = ft.TextField(
+            key="__command_input",
+            label="Execute the script",
+            hint_text="exp: bit1,2 range 1,15 --z",
+            expand=1,
+            border=ft.InputBorder.UNDERLINE,
+            on_change=input_change,
+            # text_style=text_style,
+            # 移除默认内边距，方便对齐
+            content_padding=ft.Padding.all(0),
+            bgcolor=ft.Colors.TRANSPARENT,
+        )
+        # self.hint_text = ft.Text(
+        #     value="Execute the script",
+        #     color=ft.Colors.GREY_700,
+        #     style=text_style,
+        # )
+        return ft.Stack(
+            expand=True,
+            controls=[
+                # ft.Container(content=self.hint_text, padding=ft.padding.only(top=24)),
+                self.input_field,
+            ],
+        )
+
+    # endregion
 
     # region TextField
     def __command_input(self):
@@ -588,7 +580,6 @@ class InputPad(ft.Container):
         if not isinstance(e.control, ft.Chip):
             return
         e.control.label = "Click to add a filter."
-        e.control.bgcolor = DraculaColors.GREEN
         # logr.info(f'handle_apply_click {self.pad_data=}')
         if self.applycallback:
             self.applycallback(scriptd=self.pad_data)
@@ -601,7 +592,6 @@ class InputPad(ft.Container):
                 e.control.data = k
                 self.__FT_show.visible = False
                 self.pad_data["func"] = f"{k}".strip()
-                self.input_field.value = ""
 
         if self.funcs_dc.__len__() == 0:
             self.funcs_dc = dict(sorted(filterFunc.getFuncName().items()))
@@ -613,7 +603,6 @@ class InputPad(ft.Container):
                     padding=2,
                     label=f"{key}",
                     data=key,
-                    bgcolor=ft.Colors.TRANSPARENT,
                     leading=ft.Icon(ft.Icons.FUNCTIONS),
                     on_click=lambda _, k=key: function_click(k),
                 )
@@ -648,7 +637,6 @@ class InputPad(ft.Container):
                         padding=2,
                         label=f"{key}",
                         data=key,
-                        bgcolor=ft.Colors.TRANSPARENT,
                         leading=ft.Icon(ft.Icons.FACE),
                         on_click=lambda _, k=key: function_click(k),
                     )
@@ -663,16 +651,10 @@ class InputPad(ft.Container):
 
 
 # region CommandList
-class CommandList(ft.Container):
+class CommandList(ft.Card):
     def __init__(self):
         super().__init__()
-        self.padding = 12
-        self.width = float("inf")
-        # width=400,
-        # self.border=ft.Border.all(1, DraculaColors.COMMENT)
-        self.bgcolor = ft.Colors.TRANSPARENT
-        # self.border_radius=10
-        self.content = self.__command_button()
+        self.content = self.__build_card()
         self.addcallback = None
         self.filterAddItem = None
         self.give_data = None
@@ -691,68 +673,40 @@ class CommandList(ft.Container):
     def setting_give_data(self, give_data: None):
         self.give_data = give_data
 
-    def __build_butter(self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None):
-        def handle_hover(e):
-            if e.data:
-                conter.bgcolor = ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
-                conter.border = ft.Border.all(
-                    1, ft.Colors.with_opacity(0.4, DraculaColors.PURPLE)
-                )
-            else:
-                conter.bgcolor = None
-                conter.border = ft.Border.all(
-                    1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
-                )
-            conter.update()
-            # end
-
-        conter = ft.Container(
-            width=size,
-            height=size,
-            alignment=ft.Alignment.CENTER,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)),
-            border_radius=8,
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=5,
-                alignment=ft.MainAxisAlignment.CENTER,
-                controls=[
-                    ft.Icon(icon, size=size * 0.45, color=DraculaColors.PURPLE),
-                    ft.Text(
-                        value=f"{name.upper()}",
-                        size=size * 0.15,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                ],
-            ),
-            on_hover=handle_hover,
-            on_click=oncilck,
+    def __build_card(self):
+        return ft.Container(
+            padding=12,
+            width=float("inf"),
+            # width=400,
+            border=ft.Border.all(2, DraculaColors.COMMENT),
+            border_radius=10,
+            content=self.__command_button(),
         )
-        return conter
 
     def __command_button(self):
         """Add, Apply, Cancel"""
-        command = ft.Row(
+        return ft.Row(
             controls=[
-                addclose := self.__build_butter(
+                ft.TextButton(
+                    key="add_close",
                     icon=ft.Icons.ADD_CARD,
-                    name="ADD",
-                    oncilck=self.handle_add,
+                    content="Add",
+                    on_click=self.handle_add,
                 ),
-                self.__build_butter(
+                ft.TextButton(
                     icon=ft.Icons.FILE_OPEN,
-                    name="open",
-                    oncilck=self.handle_Open,
+                    content="Open",
+                    on_click=self.handle_Open,
                 ),
-                self.__build_butter(
+                ft.TextButton(
                     icon=ft.Icons.FILE_DOWNLOAD,
-                    name="save",
-                    oncilck=self.handle_Save,
+                    content="Save",
+                    on_click=self.handle_Save,
                 ),
-                self.__build_butter(
+                ft.TextButton(
                     icon=ft.Icons.FILE_UPLOAD,
-                    name="load",
-                    oncilck=self.handle_Load,
+                    content="Load",
+                    on_click=self.handle_Load,
                 ),
             ],
             # 给这一行打个标签，方便以后提取数据
@@ -760,17 +714,17 @@ class CommandList(ft.Container):
             scroll=ft.ScrollMode.HIDDEN,
             expand=True,
         )
-        self.addclose = addclose
-        return command
 
     def setting_edit_stat_open(self):
         # e.control.content = "Add"
         # e.control.icon = ft.Icons.FILTER
-        icon, text = self.addclose.content.controls
-        if isinstance(icon, ft.Icon):
-            icon.icon = ft.Icons.CLOSE
-        if isinstance(text, ft.Text):
-            text.value = "Closed".upper()
+        row_controls = self.content.content.controls
+        # 查找 key 为 "btn_add" 的控件
+        add_close = next((c for c in row_controls if c.key == "add_close"), None)
+        if not isinstance(add_close, ft.TextButton):
+            return
+        add_close.content = "Closed"
+        add_close.icon = ft.Icons.CLOSE
 
     def setting_add_callback(self, addCallBack=None):
         self.addcallback = addCallBack
@@ -781,34 +735,21 @@ class CommandList(ft.Container):
     def handle_add(self, e):
         if self.running and self.addcallback:
             self.addcallback()
-            icon, text = self.addclose.content.controls
-            if isinstance(icon, ft.Icon) and isinstance(text, ft.Text):
-                if text.value == "ADD":
-                    text.value = "Closed".upper()
-                    icon.icon = ft.Icons.CLOSE
+            if isinstance(e.control, ft.TextButton):
+                if e.control.content == "Add":
+                    e.control.content = "Closed"
+                    e.control.icon = ft.Icons.CLOSE
                 else:
-                    text.value = "ADD"
-                    icon.icon = ft.Icons.ADD
+                    e.control.content = "Add"
+                    e.control.icon = ft.Icons.FILTER
+                e.control.update()
 
     async def handle_Save(self, e):
-        # region update save badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(3)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
         try:
             stored_id = await ft.SharedPreferences().get("stored_id")
             logr.info(f"stored_id: {stored_id}")
             if not stored_id:
                 logr.error("ID not found.")
-                await update_e(e, "NF")
                 return
             save_path = None
             is_mobile_or_web = self.page.web or self.page.platform in [
@@ -833,59 +774,38 @@ class CommandList(ft.Container):
                 with open(save_path, "wb") as f:
                     f.write(content_bytes)
                 logr.info("Desktop file save complete.")
-            await update_e(e, "done")
         except Exception as er:
-            logr.error(f"handle_Save error: {save_path}. {er}", exc_info=True)
-            await update_e(e, "error")
+            logr.error(f"handle_Save error: {save_path}. {er}",exc_info=True)
         finally:
             logr.info(f"Filter saved successfully. {save_path}")
 
     async def handle_Open(self, e):
-        # region update open badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(1)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
-
         stored_id = await ft.SharedPreferences().get("stored_id")
         if not stored_id:
             logr.error("ID not found.")
-            await update_e(e, "NF")
             return
 
         fiter_data = []
         if self.filter_clear_all:
             self.filter_clear_all()
-            await update_e(e, "CA")
-        try:
-            with open(stored_id, "r", encoding="utf-8") as f:
-                for line in f:
-                    # 去掉行尾换行符并确保行不为空
-                    line = line.strip()
-                    if line:
-                        # 将每一行的 JSON 字符串转回字典对象
-                        item = json.loads(line)
-                        fiter_data.append(item)
-                        if self.filterAddItem:
-                            self.filterAddItem(item)
-        except Exception as er:
-            await update_e(e, "ER")
+        with open(stored_id, "r", encoding="utf-8") as f:
+            for line in f:
+                # 去掉行尾换行符并确保行不为空
+                line = line.strip()
+                if line:
+                    # 将每一行的 JSON 字符串转回字典对象
+                    item = json.loads(line)
+                    fiter_data.append(item)
+                    if self.filterAddItem:
+                        self.filterAddItem(item)
         self.page.session.store.set("filters", fiter_data)
-        await update_e(e, len(fiter_data))
         logr.info(f"Reading complete. {len(fiter_data)}")
 
     async def handle_upload(self, e):
         await asyncio.sleep(0.5)
         logr.info(f"handle upload {e}")
         if e.progress == 1.0 and e.error == None:
-            filepath = os.path.join(app_temp_path, f"filter/{e.file_name}")
+            filepath = os.path.join(app_temp_path, e.file_name)
             logr.info(f"upload Fullpath {filepath}")
             fiter_data = []
             if self.filter_clear_all:
@@ -905,18 +825,6 @@ class CommandList(ft.Container):
             os.remove(filepath)
 
     async def handle_Load(self, e):
-        # region update open badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(3)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
         try:
             pick = ft.FilePicker(on_upload=self.handle_upload)
             logr.info("open pick -> pick_files")
@@ -927,26 +835,23 @@ class CommandList(ft.Container):
             )
             logr.info(f"selsect file: {pick_result}")
             if not pick_result:
-                await update_e(e, "NS")
                 return
             is_mobile_or_web = self.page.web or self.page.platform in [
-                # ft.PagePlatform.ANDROID,
+                ft.PagePlatform.ANDROID,
                 ft.PagePlatform.IOS,
             ]
             if is_mobile_or_web:
                 uplpads = [
                     ft.FilePickerUploadFile(
-                        self.page.get_upload_url(f"filter/{pick_result[0].name}", 600),
+                        self.page.get_upload_url(pick_result[0].name, 600),
                         "PUT",
                         None,
                         pick_result[0].name,
                     )
                 ]
-                logr.info(uplpads)
                 await pick.upload(uplpads)
-                await update_e(e, "web done")
             else:
-                logr.info(f"{pick_result[0]}")
+                logr.info(f'{pick_result[0]}')
                 fiter_data = []
                 if self.filter_clear_all:
                     self.filter_clear_all()
@@ -962,9 +867,7 @@ class CommandList(ft.Container):
                                 self.filterAddItem(item)
                 self.page.session.store.set("filters", fiter_data)
                 logr.info(f"Reading complete. {len(fiter_data)}")
-                await update_e(e, len(fiter_data))
         except Exception as er:
-            await update_e(e, "error")
             logr.error(f"handle_Load error. {er}", exc_info=True)
 
 
@@ -975,7 +878,8 @@ class CommandList(ft.Container):
 class FilterPage:
     """筛选页面类"""
 
-    def __init__(self):
+    def __init__(self, page: ft.Page):
+        self.page = page
         self.Filters_cmd_list = FiltersList()
         self.Input_Pad = InputPad()
         self.Command_List = CommandList()
@@ -1001,12 +905,11 @@ class FilterPage:
     def get_filter_view(self):
         return ft.Column(
             controls=[
-                ft.Text(
-                    "Filter",
-                    size=25,
-                    weight="bold",
-                    color=DraculaColors.COMMENT,
-                    font_family="RacingSansOne-Regular",
+                ft.Image(
+                    src="filter.png",
+                    fit=ft.BoxFit.FIT_HEIGHT,
+                    width=328 * 0.45,
+                    height=112 * 0.45,
                 ),
                 ft.Divider(),
                 self.Filters_cmd_list,

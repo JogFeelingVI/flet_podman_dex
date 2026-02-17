@@ -1,7 +1,7 @@
 # @Author: Your name
 # @Date:   2025-12-09 20:53:30
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-01-01 08:52:38
+# @Last Modified time: 2026-02-17 18:51:02
 # Save the output of this file and use kubectl create -f to import
 # it into Kubernetes.
 #
@@ -34,8 +34,8 @@ spec:
     ports:
     - containerPort: 22
       hostPort: 2222
-    - containerPort: 56789
-      hostPort: 56789
+    - containerPort: 45678
+      hostPort: 45678
     stdin: true
     tty: true
     volumeMounts:

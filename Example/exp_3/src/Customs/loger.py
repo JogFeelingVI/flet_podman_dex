@@ -26,7 +26,7 @@ logging.basicConfig(
     ],
 )
 
-logr = logging.getLogger("flet_core")
+logr = logging.getLogger('flet_core')
 # loger = logging.getLogger(__name__)
 
 
@@ -45,7 +45,7 @@ class LogInfo:
         设置日志文件的保存路径
         :param path: 完整的路径字符串，例如 /data/user/0/.../app_log.txt
         """
-        self.info(f"set log path: {path}")
+        self.info(f'set log path: {path}')
         try:
             # 自动创建不存在的目录
             directory = os.path.dirname(path)

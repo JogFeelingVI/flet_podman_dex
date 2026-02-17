@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-17 13:11:49
+# @Last Modified time: 2026-02-02 13:23:09
 
 from Customs.DraculaTheme import DraculaColors
 from Customs.setings import SetingsPage
@@ -10,14 +10,12 @@ from Customs.filter import FilterPage
 from Customs.lottery import LotteryPage
 from Customs.jackpot_core import randomData
 from Customs.loger import logr
-from Customs.loadfonts import FontManager, FastSourcePicker
 import flet as ft
 import os
 
 # 获取系统标示
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
-app_assets_dir = os.getenv("FLET_ASSETS_DIR")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
 os.environ["FLET_SECRET_KEY"] = randomData.generate_secure_string(16)
@@ -29,13 +27,10 @@ async def main(page: ft.Page):
     # 设置移动端适配的内边距
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = ft.Padding.only(top=20)
-    page.bgcolor = DraculaColors.BACKGROUND
 
-    # fsp = FastSourcePicker()
-    # fsp_fonts = fsp.get_fastest_json()
-    fsp_fonts = FontManager()
-    page.fonts = fsp_fonts.get_fonts()
-    logr.info(f"Registered fonts: {page.fonts.keys()}")
+    # raw_json = await page.shared_preferences.get("save_data_list")
+    # save_data = json.loads(raw_json) if raw_json else []
+    # initial_count = len(save_data)
 
     # --- 4. 预定义底部图标引用 (方便后续动态修改 Badge) ---
     lottery_icon = ft.Icon(
@@ -46,8 +41,8 @@ async def main(page: ft.Page):
     )
 
     logr.info(f"Initialization complete.")
-
-    # --- 页面逻辑控制 ---
+    
+    # --- 页面逻辑控制 --- 
     def on_navigation_change(e):
         index = e.control.selected_index
         # 切换中间的内容区域
@@ -59,11 +54,11 @@ async def main(page: ft.Page):
             content_area.content = lottery_class.view
         page.update()
 
-    setting_class = SetingsPage()
+    setting_class = SetingsPage(page)
 
-    filter_class = FilterPage()
+    filter_class = FilterPage(page)
 
-    lottery_class = LotteryPage()
+    lottery_class = LotteryPage(page)
 
     # --- 2. 界面组件定义 ---
     # 中间显示区域容器
@@ -97,8 +92,8 @@ async def main(page: ft.Page):
 
     # 将内容添加到页面
     page.add(content_area)
-    # page.update()
+    page.update()
 
 
 # 运行应用
-ft.run(main, upload_dir=app_temp_path, assets_dir=app_assets_dir)
+ft.run(main, upload_dir=app_temp_path)
