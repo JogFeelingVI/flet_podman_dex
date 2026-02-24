@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-04 02:53:12
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-06 05:46:52
+# @Last Modified time: 2026-02-23 03:52:00
 
 
 import secrets
@@ -602,6 +602,44 @@ class filterFunc:
         maxVale = max(maxVale)
         Number_for_args = CalcUtils.nwped(args)
         if maxVale in Number_for_args:
+            return True
+        return False
+
+    @staticmethod
+    def min(pabc: LotteryData, args: str, target: str):
+        if target == "all":
+            minVale = [y for x in pabc.values() for y in x]
+        else:
+            minVale = pabc[target]
+        minVale = min(minVale)
+        Number_for_args = CalcUtils.nwped(args)
+        if minVale in Number_for_args:
+            return True
+        return False
+
+    @staticmethod
+    def lianhao(pabc: LotteryData, args: str, target: str):
+        if target == "all":
+            targetv = [y for x in pabc.values() for y in x]
+        else:
+            targetv = pabc[target]
+        _lh = CalcUtils.lianhao(targetv)
+        Number_for_args = CalcUtils.nwped(args)
+        if _lh in Number_for_args:
+            return True
+        return False
+
+    @staticmethod
+    def xiangsidu(pabc: LotteryData, args: str, target: str):
+        if target == "all":
+            targetv = [y for x in pabc.values() for y in x]
+        else:
+            targetv = pabc[target]
+        cankao, notin = args.split(" ")
+        xsdu = CalcUtils.xiangsidu(targetv, cankao)
+        notin = CalcUtils.nwped(notin)
+        # print(f'{cankao=} {notin=} {xsdu=}')
+        if xsdu not in notin:
             return True
         return False
 

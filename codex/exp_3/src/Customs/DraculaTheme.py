@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 04:20:46
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-09 02:33:55
+# @Last Modified time: 2026-02-23 02:26:01
 from typing import Final
 import random
 import colorsys
@@ -25,15 +25,40 @@ class DraculaColors:
     CRADBG: Final[str] = "#1e293b"
 
 
-def RandColor():
-    h = random.random()  # 色相 (Hue)
-    s = random.uniform(0.4, 1.0)  # 饱和度 (Saturation)
-    l = random.uniform(0.4, 0.8)  # 亮度 (Lightness)，避免过黑或过白
+def RandColor(mode="def", is_dark_theme=True):
+    """
+    针对移动端深色背景优化的颜色生成器
+    is_dark_theme: 如果为 True，将确保颜色足够亮以在深色背景下显示
+    """
+    h = random.random()  # 色相 (0.0 - 1.0)
 
-    # 2. HSL 转换为 RGB (colorsys 中使用 HLS，顺序略有不同)
-    # 注意：colorsys.hls_to_rgb 接收的顺序是 (h, l, s)
+    # 根据色相调整初始亮度补偿
+    # 蓝色 (0.55-0.7) 和紫色 (0.7-0.8) 需要更高的亮度补偿
+    hue_step = 0.0
+    if 0.5 <= h <= 0.85:  # 蓝色到紫色区间
+        hue_step = 0.15
+    elif h < 0.1 or h > 0.9:  # 红色区间
+        hue_step = 0.05
+
+    match mode:
+        case "Morandi":
+            s = random.uniform(0.25, 0.45)  # 稍微提高一点点饱和度下限
+            # 深色模式下，Morandi 需要更高的亮度才能透出来
+            l = random.uniform(0.65, 0.8) + hue_step
+        case "Neon":
+            s = random.uniform(0.8, 1.0)
+            l = random.uniform(0.6, 0.75) + hue_step
+        case "Glass":
+            s = random.uniform(0.4, 0.6)
+            l = random.uniform(0.7, 0.85) + hue_step
+        case _:
+            s = random.uniform(0.5, 0.9)
+            l = random.uniform(0.6, 0.8) + hue_step
+
+    # 最终约束：确保亮度不会超过 0.95 导致变白，也不会低于 0.6 导致看不清
+    l = max(0.65 if is_dark_theme else 0.2, min(l, 0.95))
+
+    # HLS 转换为 RGB
     r, g, b = colorsys.hls_to_rgb(h, l, s)
-
-    # 3. 将 0-1 范围的 RGB 转换为 0-255 并转为 Hex 格式
     hex_color = "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
     return hex_color

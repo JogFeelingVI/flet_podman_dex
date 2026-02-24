@@ -2,9 +2,10 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-17 14:52:18
+# @Last Modified time: 2026-02-24 14:20:46
 
 
+from .pad import paditem, quickpad
 from .jackpot_core import filterFunc
 from .DraculaTheme import DraculaColors, RandColor
 from .loger import logr
@@ -193,6 +194,7 @@ class FiltersList(ft.Container):
             controls.remove(e_chip)
             self.filtersAll.remove(e_script)
             self.filtersAll_change = "del"
+            self.filter_data_task()
 
         def editForE(e):
             if self.filtersAll_change == "edit":
@@ -211,6 +213,7 @@ class FiltersList(ft.Container):
                 self.add_closed_stat()
             e_chip.update()
             self.filtersAll_change = "edit"
+            self.filter_data_task()
 
         self.filtersAll.append(_scd)
         controls.append(
@@ -360,6 +363,7 @@ class FiltersList(ft.Container):
 class InputPad(ft.Container):
     def __init__(self):
         super().__init__()
+        self.bgx = RandColor()
         self.applycallback = None
         self.__FT_show = self.__load_FT_show()
         self.funcs_dc = {}
@@ -369,8 +373,9 @@ class InputPad(ft.Container):
         self.visible = False
         self.padding = 0
         self.width = float("inf")
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, DraculaColors.GREEN))
-        self.bgcolor = ft.Colors.with_opacity(0.3, DraculaColors.GREEN)
+        # self.width = 400
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, self.bgx))
+        self.bgcolor = ft.Colors.with_opacity(0.3, self.bgx)
         self.border_radius = 10
         self.content = self.__Pad()
 
@@ -406,10 +411,12 @@ class InputPad(ft.Container):
                     self.pad_data["func"] = script["func"]
                     self.pad_data["target"] = script["target"]
                     self.pad_data["condition"] = script["condition"]
-                case "__command_input":
-                    if not isinstance(item, ft.TextField):
+                case "__quickpad__":
+                    if not isinstance(item, quickpad):
                         continue
-                    item.value = script["condition"]
+                    self.quickpad.clear_items()
+                    self.quickpad.add_item(script["condition"])
+                    # item.value = script["condition"]
                 case "__apply_text":
                     if not isinstance(item, ft.Row):
                         continue
@@ -424,36 +431,32 @@ class InputPad(ft.Container):
 
     # region quick input
     def __quick_input(self):
-        quick = [
-            ">",
-            "<",
-            "--",
-            "bit",
-            "range",
-            "mod",
-        ]
+        quick = {
+            ">": ">{n}",
+            "<": "<{n}",
+            "bit1": "bit{n}",
+            "bit1,2": "bit{n},{n}",
+            "mod": "mod{n}",
+            "range": "range {n},{n}",
+            "list": "{n+}",
+            "--": "--{m}",
+            "DEL": "DEL",
+        }
 
-        def handle_tap(e, k: str):
-            tfvp = self.input_field.value
-
-            if k.lower() not in tfvp:
-                if tfvp.endswith(" "):
-                    self.input_field.value += f"{k}"
-                elif tfvp == "":
-                    self.input_field.value += f"{k}"
-                else:
-                    self.input_field.value += f" {k}"
-
-            logr.info(f"tap {k}")
+        def handle_tap(item: str):
+            if item == "DEL":
+                self.quickpad.pop_item(-1)
+            else:
+                self.quickpad.add_item(item)
 
         spans = []
-        for key in quick:
+        for key, item in quick.items():
             spans.append(
                 ft.Container(
                     key=f"quick_{key}",
-                    content=ft.Text(f"{key}", size=17, color=DraculaColors.PURPLE),
+                    content=ft.Text(f"{key}", size=17, color=RandColor()),
                     padding=ft.Padding(5, 2, 5, 2),
-                    on_click=lambda e, k=key: handle_tap(e, k),
+                    on_click=lambda _, item=item: handle_tap(item),
                 )
             )
         self.quick_input = ft.Row(
@@ -464,6 +467,20 @@ class InputPad(ft.Container):
 
     def __Pad(self):
         """Add, Apply, Cancel"""
+        self.builder_list = []
+        self.builder = ft.Container(
+            padding=12,
+            border_radius=10,
+            bgcolor=ft.Colors.with_opacity(0.4, DraculaColors.CRADBG),
+            width=float("inf"),
+            content=ft.Row(
+                spacing=5,
+                run_spacing=5,
+                wrap=True,
+                controls=self.builder_list,
+            ),
+        )
+        self.quickpad = quickpad()
         self.inputpad = ft.Container(
             padding=12,
             border_radius=10,
@@ -478,9 +495,8 @@ class InputPad(ft.Container):
                 controls=[
                     self.__load_funxtarget(),
                     self.__FT_show,
-                    # ft.Divider(),
-                    self.__command_input(),
-                    # self.__shadow_input(),
+                    self.quickpad,
+                    # self.__command_input(),
                     self.__quick_input(),
                     # ft.Divider(),
                     self.__apply_text(),
@@ -498,7 +514,7 @@ class InputPad(ft.Container):
                     bgcolor=ft.Colors.TRANSPARENT,
                     content=ft.Text(
                         "💡This is a test plan designed to facilitate rapid data entry for filtering projects.",
-                        color=DraculaColors.BACKGROUND,
+                        color=DraculaColors.FOREGROUND,
                         size=12,
                         no_wrap=False,
                     ),
@@ -529,13 +545,16 @@ class InputPad(ft.Container):
             if not isinstance(e.control, ft.TextField):
                 return
             self.pad_data["condition"] = f"{e.control.value}".strip()
+            logr.info(f"input change {self.pad_data=}")
 
         self.input_field = ft.TextField(
             data="__command_input",
-            label="Execute the script",
             hint_text="exp: bit1,2 range 1,15 --z",
+            bgcolor=ft.Colors.with_opacity(0.2, DraculaColors.COMMENT),
             expand=1,
-            border=ft.InputBorder.UNDERLINE,
+            border=ft.InputBorder.NONE,
+            dense=True,
+            content_padding=ft.Padding.all(0),
             on_change=input_change,
         )
         return self.input_field
@@ -583,7 +602,10 @@ class InputPad(ft.Container):
         )
 
     def handle_apply_click(self, e):
+        allcmds = self.quickpad.all_command()
+        self.pad_data["condition"] = allcmds.strip()
         if "" in self.pad_data.values():
+            self.page.show_dialog(ft.SnackBar("pad_data contains null values."))
             return
         if not isinstance(e.control, ft.Chip):
             return
@@ -594,6 +616,44 @@ class InputPad(ft.Container):
             self.applycallback(scriptd=self.pad_data)
         e.control.update()
 
+    def Cratefunc(self, key: str, onclick, iconindex: int = 0):
+        if not key or not onclick:
+            return
+        userColor = RandColor()
+        icon = ft.Container(
+            content=ft.Text(
+                f"{key[iconindex].upper()}",
+                size=10,
+                weight="bold",
+                color=userColor,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            width=20,
+            height=20,
+            padding=2,
+            bgcolor=ft.Colors.with_opacity(0.5, userColor),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, userColor)),
+            border_radius=10,
+            alignment=ft.Alignment.CENTER,
+        )
+        func = ft.Container(
+            data=f"{key}",
+            padding=5,
+            bgcolor=ft.Colors.with_opacity(0.1, userColor),
+            border_radius=5,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.4, userColor)),
+            on_click=lambda _, k=key: onclick(k),
+            content=ft.Row(
+                tight=True,
+                spacing=2,
+                controls=[
+                    icon,
+                    ft.Text(f"{key}", size=14, color=userColor),
+                ],
+            ),
+        )
+        return func
+
     def handle_func_click(self, e):
         def function_click(k):
             if isinstance(e.control, ft.TextSpan):
@@ -601,23 +661,15 @@ class InputPad(ft.Container):
                 e.control.data = k
                 self.__FT_show.visible = False
                 self.pad_data["func"] = f"{k}".strip()
-                self.input_field.value = ""
+                # self.input_field.value = ""
+                self.quickpad.clear_items()
 
         if self.funcs_dc.__len__() == 0:
             self.funcs_dc = dict(sorted(filterFunc.getFuncName().items()))
 
         fun_items = []
         for key, item in self.funcs_dc.items():
-            fun_items.append(
-                ft.Chip(
-                    padding=2,
-                    label=f"{key}",
-                    data=key,
-                    bgcolor=ft.Colors.TRANSPARENT,
-                    leading=ft.Icon(ft.Icons.FUNCTIONS),
-                    on_click=lambda _, k=key: function_click(k),
-                )
-            )
+            fun_items.append(self.Cratefunc(key, function_click))
         self.__FT_show.controls = fun_items
         self.__FT_show.visible = True
 
@@ -643,16 +695,7 @@ class InputPad(ft.Container):
             # ? target_pn 已经装载执行下面
             target_pn_items = []
             for key in self.target_pn:
-                target_pn_items.append(
-                    ft.Chip(
-                        padding=2,
-                        label=f"{key}",
-                        data=key,
-                        bgcolor=ft.Colors.TRANSPARENT,
-                        leading=ft.Icon(ft.Icons.FACE),
-                        on_click=lambda _, k=key: function_click(k),
-                    )
-                )
+                target_pn_items.append(self.Cratefunc(key, function_click, 1))
             self.__FT_show.controls = target_pn_items
             self.__FT_show.visible = True
         except Exception as e:
@@ -704,7 +747,13 @@ class CommandList(ft.Container):
                     1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
                 )
             conter.update()
-            # end
+        
+        def handle_onclick(e):
+            if oncilck:
+                self.page.run_task(oncilck, e)
+            # Event(name='hover', data=True)
+            handle_hover(ft.Event(name="hover",control=conter, data=False))
+        # end
 
         conter = ft.Container(
             width=size,
@@ -726,7 +775,7 @@ class CommandList(ft.Container):
                 ],
             ),
             on_hover=handle_hover,
-            on_click=oncilck,
+            on_click=handle_onclick,
         )
         return conter
 
@@ -778,7 +827,7 @@ class CommandList(ft.Container):
     def setting_filte_add_item(self, filterAddItem=None):
         self.filterAddItem = filterAddItem
 
-    def handle_add(self, e):
+    async def handle_add(self, e):
         if self.running and self.addcallback:
             self.addcallback()
             icon, text = self.addclose.content.controls
@@ -789,6 +838,7 @@ class CommandList(ft.Container):
                 else:
                     text.value = "ADD"
                     icon.icon = ft.Icons.ADD
+            self.addclose.update()
 
     async def handle_Save(self, e):
         # region update save badge

@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-17 15:13:06
+# @Last Modified time: 2026-02-23 02:44:32
 
 from .DraculaTheme import DraculaColors, RandColor
 from .jackpot_core import randomData
@@ -129,6 +129,9 @@ class input_user_rule(ft.Container):
                 ft.TextButton(
                     expand=1,
                     icon=ft.Icons.ADD_BOX,
+                    style=ft.ButtonStyle(
+                        color=self.bgX,
+                    ),
                     content="Add",
                     on_click=self.handle_add,
                 ),
@@ -137,7 +140,7 @@ class input_user_rule(ft.Container):
                     icon=ft.Icons.WINDOW,
                     style=ft.ButtonStyle(
                         bgcolor=self.bgX,
-                        color=DraculaColors.BACKGROUND,
+                        color=DraculaColors.FOREGROUND,
                         shape=ft.RoundedRectangleBorder(radius=5),
                     ),
                     content="Apply",
@@ -146,6 +149,9 @@ class input_user_rule(ft.Container):
                 ft.TextButton(
                     expand=1,
                     icon=ft.Icons.CANCEL,
+                    style=ft.ButtonStyle(
+                        color=self.bgX,
+                    ),
                     content="Cancel",
                     on_click=self.handle_Cancel,
                 ),
@@ -201,7 +207,9 @@ class input_user_rule(ft.Container):
                 ft.Container(
                     alignment=ft.Alignment.CENTER_LEFT,
                     padding=ft.Padding(12, 5, 12, 5),
-                    content=ft.Text("Add new game rules.", size=16),
+                    content=ft.Text(
+                        "Add new game rules.", size=16, color=DraculaColors.BACKGROUND
+                    ),
                 ),
                 ft.Container(
                     border=ft.Border(
@@ -464,7 +472,7 @@ class showRulev2(ft.Container):
             padding=12,
             border_radius=10,
             width=float("inf"),
-            bgcolor=ft.Colors.with_opacity(0.3,RandColor()),
+            bgcolor=ft.Colors.with_opacity(0.3, RandColor()),
             # blend_mode=ft.BlendMode.SCREEN,
             content=ft.Column(
                 spacing=0,
@@ -517,8 +525,8 @@ class showRulev2(ft.Container):
             row.controls.append(item)
         return row
 
-# endregion
 
+# endregion
 
 
 # region DefaultSettings
@@ -527,6 +535,7 @@ class DefaultSettings(ft.Container):
 
     def __init__(self):
         super().__init__()
+        self.userColor = RandColor()
         self.width = float("inf")
         self.border = ft.Border.all(
             1, ft.Colors.with_opacity(0.6, DraculaColors.COMMENT)
@@ -630,6 +639,7 @@ class DefaultSettings(ft.Container):
                 item.unlink()
         filePath.parent.mkdir(parents=True, exist_ok=True)
         filePath.write_text("")
+        await ft.SharedPreferences().set("stored_id", self.stored_id)
         self.page.show_dialog(ft.SnackBar(f"Regenerate id {id}"))
 
     def __build_card(self):
@@ -650,7 +660,7 @@ class DefaultSettings(ft.Container):
             on_click=self.handle_add_rule,
         )
         Regenerate = ft.Button(
-            bgcolor=ft.Colors.with_opacity(0.7, RandColor()),
+            bgcolor=ft.Colors.with_opacity(0.7, self.userColor),
             color=DraculaColors.BACKGROUND,
             icon=ft.Icons.REFRESH,
             content="Regenerate",
