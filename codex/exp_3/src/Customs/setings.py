@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-23 02:44:32
+# @Last Modified time: 2026-02-25 14:54:50
 
 from .DraculaTheme import DraculaColors, RandColor
 from .jackpot_core import randomData
@@ -93,20 +93,15 @@ Lotter_Data = {
 class input_user_rule(ft.Container):
     def __init__(self):
         super().__init__()
+        self.textbox_list = []
         self.visible = False
-        self.bgX = RandColor()
+        self.userColor = RandColor()
         self.content = self.__build_card()
         self.render_filters = None
         self.row_name_char = 65
-        self.templejson = {
-            "randomData": {
-                "note": "🇨🇳体育排列3/5",
-                "PA": {"enabled": True, "range_start": 0, "range_end": 9, "count": 1},
-            }
-        }
         self.width = float("inf")
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.bgX))
-        self.bgcolor = ft.Colors.with_opacity(0.6, self.bgX)
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.userColor))
+        self.bgcolor = ft.Colors.with_opacity(0.6, self.userColor)
         self.border_radius = 10
 
     def setting_render_filters(self, render_filters=None):
@@ -122,6 +117,15 @@ class input_user_rule(ft.Container):
         self.visible = True
         self.update()
 
+    def templejson(self):
+        """默认json格式"""
+        return {
+            "randomData": {
+                "note": "🇨🇳templejson",
+                "PA": {"enabled": True, "range_start": 0, "range_end": 9, "count": 1},
+            }
+        }
+
     def __command_button(self):
         """Add, Apply, Cancel"""
         return ft.Row(
@@ -130,7 +134,7 @@ class input_user_rule(ft.Container):
                     expand=1,
                     icon=ft.Icons.ADD_BOX,
                     style=ft.ButtonStyle(
-                        color=self.bgX,
+                        color=self.userColor,
                     ),
                     content="Add",
                     on_click=self.handle_add,
@@ -139,8 +143,8 @@ class input_user_rule(ft.Container):
                     expand=1,
                     icon=ft.Icons.WINDOW,
                     style=ft.ButtonStyle(
-                        bgcolor=self.bgX,
-                        color=DraculaColors.FOREGROUND,
+                        bgcolor=self.userColor,
+                        color=DraculaColors.BACKGROUND,
                         shape=ft.RoundedRectangleBorder(radius=5),
                     ),
                     content="Apply",
@@ -150,7 +154,7 @@ class input_user_rule(ft.Container):
                     expand=1,
                     icon=ft.Icons.CANCEL,
                     style=ft.ButtonStyle(
-                        color=self.bgX,
+                        color=self.userColor,
                     ),
                     content="Cancel",
                     on_click=self.handle_Cancel,
@@ -160,36 +164,85 @@ class input_user_rule(ft.Container):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
 
-    def __get_note(self):
-        return ft.TextField(
-            label="Note",
-            hint_text="Rule Settings Instructions",
-            expand=1,
-            border=ft.InputBorder.UNDERLINE,
+    def _lable(self, name: str = "note"):
+        return ft.Text(
+            f"{name}",
+            size=15,
+            weight="bold",
+            color=ft.Colors.with_opacity(0.6, self.userColor),
         )
+
+    def _textbox(self, value, wid: int = -1, data=None):
+        is_expand = wid == -1
+        textbox = ft.TextField(
+            data=data,
+            value=value,
+            cursor_height=15,
+            text_size=15,
+            color=self.userColor,
+            dense=True,
+            content_padding=ft.Padding.all(0),
+            border=ft.InputBorder.UNDERLINE,
+            border_color=ft.Colors.with_opacity(0.4, self.userColor),
+            text_align="left" if is_expand else "center",
+            expand=is_expand,
+            width=None if is_expand else wid,
+        )
+        return textbox
+
+    def __get_note(self):
+        conter = ft.Container(
+            data="__note",
+            padding=ft.Padding.all(10),
+            border_radius=10,
+            content=ft.Row(
+                wrap=False,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    self._lable("note: "),
+                    temp := self._textbox("game ruels.", -1, "note"),
+                ],
+            ),
+        )
+        self.textbox_list.append(temp)
+        return conter
 
     def __get_range_count(self, name="a"):
         name = name.upper()
-        return ft.Row(
-            controls=[
-                ft.TextField(
-                    label=f"P{name.upper()}",
-                    expand=2,
-                    hint_text="min,max",
-                    data=f"{name}_Max",
-                    border=ft.InputBorder.UNDERLINE,
-                ),
-                ft.TextField(
-                    label="Count",
-                    expand=1,
-                    data=f"{name}_K",
-                    border=ft.InputBorder.UNDERLINE,
-                ),
-            ],
-            # 给这一行打个标签，方便以后提取数据
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            data=name,
+        text = "P#: From {a}-{b}, select {c} number.".replace("#", name)
+        # 使用 re.split，并通过括号 () 捕获占位符，这样占位符会被保留在列表中
+        # 模式：(\{.*?\}) 匹配任何被 {} 包裹的内容
+        rec = re.compile(r"(\{.*?\})")
+        result = [i for i in rec.split(text) if i]
+        abc = {
+            "a": 0,
+            "b": 9,
+            "c": 1,
+        }
+        list = []
+        for item in result:
+            if item.startswith("{") and item.endswith("}"):
+                abckey = item[1:-1]
+                temp = self._textbox(
+                    value=abc[abckey], wid=20, data=f"P{name}#{abckey}"
+                )
+                list.append(temp)
+                self.textbox_list.append(temp)
+            else:
+                list.append(self._lable(item))
+
+        conter = ft.Container(
+            data="__range_count",
+            padding=ft.Padding.all(10),
+            border_radius=10,
+            content=ft.Row(
+                spacing=0,
+                wrap=False,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=list,
+            ),
         )
+        return conter
 
     def __build_card(self):
         self.newruls = ft.Column(
@@ -208,15 +261,12 @@ class input_user_rule(ft.Container):
                     alignment=ft.Alignment.CENTER_LEFT,
                     padding=ft.Padding(12, 5, 12, 5),
                     content=ft.Text(
-                        "Add new game rules.", size=16, color=DraculaColors.BACKGROUND
+                        "Add new game rules.",
+                        size=16,
+                        color=ft.Colors.with_opacity(0.6, self.userColor),
                     ),
                 ),
                 ft.Container(
-                    border=ft.Border(
-                        top=ft.BorderSide(
-                            1, ft.Colors.with_opacity(0.3, DraculaColors.FOREGROUND)
-                        ),  # 宽度为 3, 颜色为蓝色
-                    ),
                     bgcolor=ft.Colors.with_opacity(0.6, DraculaColors.CRADBG),
                     border_radius=10,
                     padding=ft.Padding(12, 5, 12, 5),
@@ -234,57 +284,47 @@ class input_user_rule(ft.Container):
         self.newruls.controls.insert(temp_len - 1, new_row)
 
     def handle_Cancel(self):
+        self.row_name_char = 65
+        self.textbox_list.clear()
+        self.content = self.__build_card()
         self.visible = False
         self.update()
 
     async def handle_Apply(self):
-        temp = self.templejson.copy()
-        rows = self.newruls.controls
-        for _item in rows:
-            if isinstance(_item, ft.TextField):
+        temp = self.templejson()
+        for tbox in self.textbox_list:
+            if not isinstance(tbox, ft.TextField):
+                continue
+            if tbox.data == "note":
                 temp["randomData"]["note"] = (
-                    _item.value or "Jackptot lotter new game rule."
+                    tbox.value or "Jackptot lotter new game rule."
                 )
                 continue
-            if isinstance(_item, ft.Row):
-                label = ""
-                label_value = {}
-                for _child_item in _item.controls:
-                    if not isinstance(_child_item, ft.TextField):
-                        continue
-                    if _child_item.label.startswith("P"):
-                        label = _child_item.label
-                        label_value.update(self.Convert_to_list(_child_item.value))
-                    if _child_item.label.startswith("C"):
-                        count = (
-                            int(_child_item.value) if _child_item.value.isdigit() else 0
+            elif f"{tbox.data}".startswith("P"):
+                # return {"range_start": range_start, "range_end": range_end, "enabled": True}
+                name, flg = f"{tbox.data}".split("#")
+                if name not in temp["randomData"].keys():
+                    temp["randomData"][name] = {}
+                match flg:
+                    case "a":
+                        temp["randomData"][name].update(
+                            {"range_start": int(tbox.value)}
                         )
-                        label_value.update({"count": count})
-                if label == "" or not label_value["enabled"]:
-                    continue
-                temp["randomData"][label] = label_value
+                    case "b":
+                        temp["randomData"][name].update({"range_end": int(tbox.value)})
+                    case "c":
+                        temp["randomData"][name].update(
+                            {"count": int(tbox.value), "enabled": True}
+                        )
+                continue
+
         global jackpot_seting
-        logr.info(f"bind temple dict {temp} {jackpot_seting}")
         with open(jackpot_seting, "w", encoding="utf-8") as f:
             json.dump(temp, f, indent=4, ensure_ascii=False)
         self.page.session.store.set("settings", temp)
         if self.render_filters:
             self.render_filters()
         self.handle_Cancel()
-
-    def Convert_to_list(self, lable_value: str):
-        """处理用户输入"""
-        if lable_value in [None, ""]:
-            return {"enabled": False}
-        mathch = re.findall(r"(\d+)", lable_value)
-        if mathch:
-            value = [int(x) for x in mathch if x.isdigit()]
-            range_start = min(value)
-            range_end = max(value)
-            if range_start == range_end:
-                range_start = 0
-            return {"range_start": range_start, "range_end": range_end, "enabled": True}
-        return {"enabled": False}
 
 
 # endregion

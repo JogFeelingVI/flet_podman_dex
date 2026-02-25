@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-24 13:35:56
+# @Last Modified time: 2026-02-25 08:26:26
 
 from .jackpot_core import randomData, filter_for_pabc
 from .DraculaTheme import DraculaColors, RandColor
@@ -36,7 +36,7 @@ class Photograph(ft.Container):
 
     def did_mount(self):
         self.running = True
-        print(f"Photograph did_mount. {self.running=}")
+        # print(f"Photograph did_mount. {self.running=}")
         self.initialization()
 
     def will_unmount(self):
@@ -293,10 +293,10 @@ class itemC2plus(ft.Container):
             )
             row.controls.append(item)
         return row
-    
-    def setting_adjust_position(self, adjustposition:None):
+
+    def setting_adjust_position(self, adjustposition: None):
         self.adjust_position = adjustposition
-        logr.info(f'setting adjustposition.')
+        logr.info(f"setting adjustposition.")
 
     def did_mount(self):
         if not self.running and not self.is_refreshing and self.state_exp != "done":
@@ -336,7 +336,7 @@ class itemC2plus(ft.Container):
                 if self.selected
                 else None
             )
-            rows:ft.Column = self.content
+            rows: ft.Column = self.content
             rows.controls[1].visible = not self.selected
             if self.adjust_position and self.selected:
                 self.adjust_position(self)
@@ -517,13 +517,13 @@ class itemsList(ft.Container):
             ft.PagePlatform.IOS,
         ]
         self.max_item = 10 if is_mobile_or_web else 1000
-        
-    def adjust_position(self, item:itemC2plus):
+
+    def adjust_position(self, item: itemC2plus):
         if not item:
             return
-        control:ft.Column = self.content
+        control: ft.Column = self.content
         control.controls.remove(item)
-        control.controls.insert(0,item)
+        control.controls.insert(0, item)
         control.update()
         logr.info("adjust_position is Done.")
 
@@ -533,7 +533,9 @@ class itemsList(ft.Container):
             logr.info(f"add_item type {type(control)}")
             return
         itemc2_len = [
-            x for x in control.controls if isinstance(x, itemC2plus)
+            x
+            for x in control.controls
+            if isinstance(x, itemC2plus) and x.selected == False
         ].__len__()
         if itemc2_len < self.max_item:
             temp = itemC2plus()
@@ -634,12 +636,13 @@ class commandList(ft.Container):
                     1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
                 )
             conter.update()
-            
+
         def handle_onclick(e):
             if oncilck:
                 oncilck(e)
             # Event(name='hover', data=True)
-            handle_hover(ft.Event(name="hover",control=conter, data=False))
+            handle_hover(ft.Event(name="hover", control=conter, data=False))
+
         # end
 
         conter = ft.Container(
@@ -686,16 +689,16 @@ class commandList(ft.Container):
             scroll=ft.ScrollMode.HIDDEN,
         )
 
-    def handle_export(self,e):
+    def handle_export(self, e):
         if self.shot_capture:
             self.page.run_task(self.shot_capture)
 
-    def handle_add(self,e):
+    def handle_add(self, e):
         """执行add"""
         if self.item_list_add and self.itemc2remove:
             self.item_list_add(self.itemc2remove)
 
-    def handle_refresh(self,e):
+    def handle_refresh(self, e):
         if self.all_refresh:
             self.all_refresh()
 

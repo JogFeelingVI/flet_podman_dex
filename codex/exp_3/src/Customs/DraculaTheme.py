@@ -2,10 +2,12 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 04:20:46
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-23 02:26:01
+# @Last Modified time: 2026-02-25 03:05:46
 from typing import Final
 import random
 import colorsys
+
+_last_h = random.random()
 
 
 class DraculaColors:
@@ -30,7 +32,9 @@ def RandColor(mode="def", is_dark_theme=True):
     针对移动端深色背景优化的颜色生成器
     is_dark_theme: 如果为 True，将确保颜色足够亮以在深色背景下显示
     """
-    h = random.random()  # 色相 (0.0 - 1.0)
+    global _last_h
+    _last_h = (_last_h + 0.618033988749895) % 1.0
+    h = _last_h  # 色相 (0.0 - 1.0)
 
     # 根据色相调整初始亮度补偿
     # 蓝色 (0.55-0.7) 和紫色 (0.7-0.8) 需要更高的亮度补偿

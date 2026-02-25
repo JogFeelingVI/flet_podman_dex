@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-24 14:20:46
+# @Last Modified time: 2026-02-25 08:23:19
 
 
 from .pad import paditem, quickpad
@@ -139,6 +139,7 @@ class FiltersList(ft.Container):
         self.width = float("inf")
         self.padding = 10
         self.border_radius = 10
+        self.startedit = False
 
     def setting_edit_Callback(self, edit_item_callback=None):
         self.editItemCallback = edit_item_callback
@@ -197,7 +198,7 @@ class FiltersList(ft.Container):
             self.filter_data_task()
 
         def editForE(e):
-            if self.filtersAll_change == "edit":
+            if self.startedit:
                 return
             if not isinstance(e.control, ft.Container):
                 return
@@ -209,6 +210,7 @@ class FiltersList(ft.Container):
             self.filtersAll.remove(e_script)
             if self.editItemCallback:
                 self.editItemCallback(e_script)
+                self.startedit = True
             if self.add_closed_stat:
                 self.add_closed_stat()
             e_chip.update()
@@ -222,6 +224,7 @@ class FiltersList(ft.Container):
             FilterChipV2(_scd, deleteForE, editForE)
             # endregion
         )
+        self.startedit = False
         self.filtersAll_change = "add"
         self.content.update()
         self.filter_data_task()
@@ -747,12 +750,13 @@ class CommandList(ft.Container):
                     1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
                 )
             conter.update()
-        
+
         def handle_onclick(e):
             if oncilck:
                 self.page.run_task(oncilck, e)
             # Event(name='hover', data=True)
-            handle_hover(ft.Event(name="hover",control=conter, data=False))
+            handle_hover(ft.Event(name="hover", control=conter, data=False))
+
         # end
 
         conter = ft.Container(
