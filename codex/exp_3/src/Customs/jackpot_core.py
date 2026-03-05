@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-04 02:53:12
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-23 03:52:00
+# @Last Modified time: 2026-03-04 22:29:53
 
 
 import secrets
@@ -133,7 +133,7 @@ class CalcUtils:
             refer_set = {int(x) for x in re.findall(r"(\d+)", refer)}
         else:
             refer_set = set(refer)  # 转集合加速查找
-
+        # print(f'debug: {refer_set}')
         # 2. 统计特征 (避免双重计数)
         cf_count = 0
         xl_count = 0

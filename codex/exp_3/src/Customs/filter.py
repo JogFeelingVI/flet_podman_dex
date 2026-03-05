@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-25 08:23:19
+# @Last Modified time: 2026-03-05 02:11:37
 
 
 from .pad import paditem, quickpad
@@ -37,23 +37,20 @@ class FilterChipV2(ft.Container):
         self.border_radius = 8
         # 2. 设置边框：宽度和颜色
         self.border = ft.Border.all(1, self.ColorOpx(0.3))
-        # self.on_hover = self.handle_hover
+        self.animate = ft.Animation(300, ft.AnimationCurve.EASE)
         self.ondelete = ondelete
         self.onclick = onclick
+        self.on_hover = self.handle_hover
 
     def handle_right_hover(self, e):
         if e.data:
             self.Cright.content = ft.Icon(
                 ft.Icons.DELETE_FOREVER, color=self.ColorOpx(1)
             )
-            self.border = ft.Border.all(1, self.ColorOpx(1))
-            self.bgcolor = self.ColorOpx(0.4)
         else:
             self.Cright.content = ft.Icon(ft.Icons.DELETE, color=self.ColorOpx(0.3))
-            self.border = ft.Border.all(1, self.ColorOpx(0.3))
-            self.bgcolor = self.ColorOpx(0.1)
 
-    def handle_left_hover(self, e):
+    def handle_hover(self, e):
         if e.data:
             self.border = ft.Border.all(1, self.ColorOpx(1))
             self.bgcolor = self.ColorOpx(0.4)
@@ -105,7 +102,7 @@ class FilterChipV2(ft.Container):
                         ],
                     ),
                     on_click=self.handle_left_click,
-                    on_hover=self.handle_left_hover,
+                    # on_hover=self.handle_left_hover,
                 ),
                 right := ft.Container(
                     padding=0,
@@ -339,8 +336,10 @@ class FiltersList(ft.Container):
             if sw.data == "def":
                 sw.badge = None
                 break
-            sw.update()
+            if self.running:
+                sw.update()
 
+    # region saveTodict
     async def saveTodict(self):
         if self.filtersAll_change == "none":
             return
@@ -348,6 +347,7 @@ class FiltersList(ft.Container):
         stored_id = await ft.SharedPreferences().get("stored_id")
         if not stored_id:
             logr.error("ID not found.")
+            self.page.show_dialog(ft.SnackBar(f"ID not found."))
             return
         try:
             with open(stored_id, "w", encoding="utf-8") as f:
@@ -357,6 +357,8 @@ class FiltersList(ft.Container):
             self.filtersAll_change = "none"
         except Exception as er:
             logr.info(f"Auto Save error. {er}", exc_info=True)
+
+    # endregion
 
 
 # endregion
@@ -488,11 +490,6 @@ class InputPad(ft.Container):
             padding=12,
             border_radius=10,
             bgcolor=ft.Colors.with_opacity(0.6, DraculaColors.CRADBG),
-            # border=ft.Border(
-            #     top=ft.BorderSide(
-            #         1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
-            #     ),  # 宽度为 3, 颜色为蓝色
-            # ),
             width=float("inf"),
             content=ft.Column(
                 controls=[
@@ -737,7 +734,9 @@ class CommandList(ft.Container):
     def setting_give_data(self, give_data: None):
         self.give_data = give_data
 
-    def __build_butter(self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None):
+    def __build_butter(
+        self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None, onlong=None
+    ):
         def handle_hover(e):
             if e.data:
                 conter.bgcolor = ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
@@ -750,6 +749,10 @@ class CommandList(ft.Container):
                     1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
                 )
             conter.update()
+
+        def handle_long_press(e):
+            if onlong:
+                self.page.run_task(onlong, e)
 
         def handle_onclick(e):
             if oncilck:
@@ -765,6 +768,7 @@ class CommandList(ft.Container):
             alignment=ft.Alignment.CENTER,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)),
             border_radius=8,
+            animate=ft.Animation(300, ft.AnimationCurve.EASE),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
@@ -780,6 +784,7 @@ class CommandList(ft.Container):
             ),
             on_hover=handle_hover,
             on_click=handle_onclick,
+            on_long_press=handle_long_press,
         )
         return conter
 
@@ -796,6 +801,7 @@ class CommandList(ft.Container):
                     icon=ft.Icons.FILE_OPEN,
                     name="open",
                     oncilck=self.handle_Open,
+                    onlong=self.handle_long,
                 ),
                 self.__build_butter(
                     icon=ft.Icons.FILE_DOWNLOAD,
@@ -845,79 +851,98 @@ class CommandList(ft.Container):
             self.addclose.update()
 
     async def handle_Save(self, e):
-        # region update save badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(3)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
+        stored_id = await ft.SharedPreferences().get("stored_id")
+        logr.info(f"stored_id: {stored_id}")
+        if not stored_id:
+            logr.error("ID not found.")
+            self.page.show_dialog(ft.SnackBar(f"ID not found."))
+            return
+        filtersAll = self.page.session.store.get("filters")
+        if not filtersAll:
+            logr.info(f"read filters is error.")
+            self.page.show_dialog(ft.SnackBar(f"read filters is error."))
         try:
-            stored_id = await ft.SharedPreferences().get("stored_id")
-            logr.info(f"stored_id: {stored_id}")
-            if not stored_id:
-                logr.error("ID not found.")
-                await update_e(e, "NF")
-                return
-            save_path = None
+            content_bytes = ""
+            for _fitem in filtersAll:
+                content_bytes += json.dumps(_fitem) + "\n"
             is_mobile_or_web = self.page.web or self.page.platform in [
                 ft.PagePlatform.ANDROID,
                 ft.PagePlatform.IOS,
             ]
-
-            with open(stored_id, "r", encoding="utf-8") as f:
-                content = f.read()
-                content_bytes = content.encode("utf-8")
-                logr.info(
-                    f"content_bytes: {content_bytes.__sizeof__()} open pick -> save_file."
-                )
-                save_path = await ft.FilePicker().save_file(
-                    file_type=ft.FilePickerFileType.CUSTOM,
-                    allowed_extensions=["dict"],
-                    file_name="jackpot_filters.dict",
-                    src_bytes=content_bytes,
-                )
-                logr.info(f"save_path: {save_path}")
+            save_path = await ft.FilePicker().save_file(
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["dict"],
+                file_name="jackpot_filters.dict",
+                src_bytes=content_bytes.encode("utf-8"),
+            )
+            logr.info(f"save_path: {save_path}")
             if save_path and not is_mobile_or_web:
                 with open(save_path, "wb") as f:
                     f.write(content_bytes)
-                logr.info("Desktop file save complete.")
-            await update_e(e, "done")
+                self.page.show_dialog(
+                    ft.SnackBar(f"{self.page.platform} file save complete.")
+                )
         except Exception as er:
-            logr.error(f"handle_Save error: {save_path}. {er}", exc_info=True)
-            await update_e(e, "error")
+            self.page.show_dialog(
+                ft.SnackBar(
+                    f"handle_Save error: {save_path=} {self.page.platform=}. {er}."
+                )
+            )
         finally:
-            logr.info(f"Filter saved successfully. {save_path}")
+            logr.info(f"Filter saved {save_path}")
+
+    async def handle_long(self, e):
+        def cancel_clear(e):
+            self.page.pop_dialog()
+
+        def confirm_clear(e):
+            if self.filter_clear_all:
+                self.filter_clear_all()
+                self.page.session.store.set("filters", [])
+            self.page.pop_dialog()
+
+        confirm_dialog = ft.AlertDialog(
+            modal=True,  # 模态对话框，必须点击按钮才能关闭
+            title=ft.Text("Confirm operation", size=16, color=RandColor()),
+            content=ft.Container(
+                padding=12,
+                width=400,
+                content=ft.Row(
+                    wrap=True,
+                    controls=ft.Text(
+                        value="Are you sure you want to clear all filters? This operation cannot be undone after it has been performed?",
+                        size=15,
+                        color=RandColor(),
+                    ),
+                ),
+            ),
+            actions=[
+                ft.TextButton(
+                    "NO",
+                    on_click=cancel_clear,
+                    style=ft.ButtonStyle(color=RandColor()),
+                ),
+                # 确定按钮用红色突出显示危险操作
+                ft.TextButton(
+                    "YES",
+                    on_click=confirm_clear,
+                    style=ft.ButtonStyle(color=RandColor()),
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,  # 按钮靠右对齐
+        )
+        self.page.show_dialog(confirm_dialog)
+        logr.info(f"long press run cls.")
 
     async def handle_Open(self, e):
-        # region update open badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(1)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
-
         stored_id = await ft.SharedPreferences().get("stored_id")
         if not stored_id:
-            logr.error("ID not found.")
-            await update_e(e, "NF")
+            self.page.show_dialog(ft.SnackBar(f"ID not found."))
             return
 
         fiter_data = []
         if self.filter_clear_all:
             self.filter_clear_all()
-            await update_e(e, "CA")
         try:
             with open(stored_id, "r", encoding="utf-8") as f:
                 for line in f:
@@ -930,9 +955,10 @@ class CommandList(ft.Container):
                         if self.filterAddItem:
                             self.filterAddItem(item)
         except Exception as er:
-            await update_e(e, "ER")
+            self.page.show_dialog(ft.SnackBar(f"File reading error. {er}"))
+            return
         self.page.session.store.set("filters", fiter_data)
-        await update_e(e, len(fiter_data))
+        self.page.show_dialog(ft.SnackBar(f"Reading complete. {len(fiter_data)}"))
         logr.info(f"Reading complete. {len(fiter_data)}")
 
     async def handle_upload(self, e):
@@ -955,22 +981,10 @@ class CommandList(ft.Container):
                         if self.filterAddItem:
                             self.filterAddItem(item)
             self.page.session.store.set("filters", fiter_data)
-            logr.info(f"Reading complete. {len(fiter_data)}")
+            self.page.show_dialog(ft.SnackBar(f"Reading complete. {len(fiter_data)}"))
             os.remove(filepath)
 
     async def handle_Load(self, e):
-        # region update open badge
-        async def update_e(e, msg=None):
-            e_control: ft.TextButton = e.control
-            if not isinstance(e_control, ft.TextButton):
-                return
-            e_control.badge = f"{msg}"
-            e_control.update()
-            await asyncio.sleep(3)
-            e_control.badge = None
-            e_control.update()
-
-        # endregion
         try:
             pick = ft.FilePicker(on_upload=self.handle_upload)
             logr.info("open pick -> pick_files")
@@ -981,12 +995,15 @@ class CommandList(ft.Container):
             )
             logr.info(f"selsect file: {pick_result}")
             if not pick_result:
-                await update_e(e, "NS")
                 return
-            is_mobile_or_web = self.page.web or self.page.platform in [
-                # ft.PagePlatform.ANDROID,
-                ft.PagePlatform.IOS,
-            ]
+            is_mobile_or_web = (
+                self.page.web
+                or self.page.platform
+                in [
+                    # ft.PagePlatform.ANDROID,
+                    # ft.PagePlatform.IOS,
+                ]
+            )
             if is_mobile_or_web:
                 uplpads = [
                     ft.FilePickerUploadFile(
@@ -996,9 +1013,8 @@ class CommandList(ft.Container):
                         pick_result[0].name,
                     )
                 ]
-                logr.info(uplpads)
+                logr.info(f"uplpads: {uplpads}")
                 await pick.upload(uplpads)
-                await update_e(e, "web done")
             else:
                 logr.info(f"{pick_result[0]}")
                 fiter_data = []
@@ -1016,9 +1032,10 @@ class CommandList(ft.Container):
                                 self.filterAddItem(item)
                 self.page.session.store.set("filters", fiter_data)
                 logr.info(f"Reading complete. {len(fiter_data)}")
-                await update_e(e, len(fiter_data))
+                self.page.show_dialog(
+                    ft.SnackBar(f"Reading complete. {len(fiter_data)}")
+                )
         except Exception as er:
-            await update_e(e, "error")
             logr.error(f"handle_Load error. {er}", exc_info=True)
 
 

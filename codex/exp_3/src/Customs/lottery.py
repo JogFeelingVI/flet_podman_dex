@@ -2,231 +2,40 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-25 08:26:26
+# @Last Modified time: 2026-03-05 02:48:25
 
+from .Savedialogbox import savedialog, testdialog
 from .jackpot_core import randomData, filter_for_pabc
 from .DraculaTheme import DraculaColors, RandColor
 from .loger import logr
 import flet as ft
-import datetime
 import os
 import asyncio
 import time
 import re
+import random
+import requests
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
 
-# region Photograph
-
-
-class Photograph(ft.Container):
-    def __init__(self):
-        super().__init__()
-        self.content = self.__build__Container()
-        self.visible = False
-        self.padding = 12
-        self.width = float("inf")
-        self.border = ft.Border.all(
-            1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
-        )
-        self.border_radius = 10
-
-    def did_mount(self):
-        self.running = True
-        # print(f"Photograph did_mount. {self.running=}")
-        self.initialization()
-
-    def will_unmount(self):
-        self.running = False
-
-    def setting_get_exp_all(self, getexpall: list = None):
-        self.get_exp_all = getexpall
-
-    async def update_tips(self, text: str = ""):
-        self.tips.value = f"{text}"
-        self.tips.update()
-        await asyncio.sleep(1)
-
-    def initialization(self):
-        is_mobile_or_web = self.page.web or self.page.platform in [
-            ft.PagePlatform.ANDROID,
-            ft.PagePlatform.IOS,
-        ]
-        self.conter.width = 400 if is_mobile_or_web else float("inf")
-
-    def contentlist(self):
-        self.neirong = ft.Column(
-            tight=True,
-            controls=[ft.Text("Photograph", size=16, color=RandColor())],
-        )
-        conters = ft.Container(
-            padding=12,
-            width=float("inf"),
-            border=ft.Border(
-                top=ft.BorderSide(1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)),
-                bottom=ft.BorderSide(
-                    1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
-                ),
-            ),
-            blend_mode=ft.BlendMode.OVERLAY,
-            content=self.neirong,
-        )
-        return conters
-
-    def footer(self):
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.genid = randomData.generate_secure_string(8)
-        return ft.Row(
-            controls=[
-                ft.Text(f"{now}-{self.genid}", size=14, color=DraculaColors.ORANGE)
-            ],
-            alignment=ft.MainAxisAlignment.END,
-        )
-
-    async def espcap_windows(self):
-        count = 3
-        while count > 0:
-            await self.update_tips(f"The window will close in {count} seconds.")
-            count -= 1
-        self.visible = False
-        self.update()
-
-    def CreateItem(self, text: str = "", i=0):
-        userColor = RandColor(mode="def")
-        item = (
-            ft.Container(
-                padding=5,
-                border=ft.Border.all(1, ft.Colors.with_opacity(0.4, userColor)),
-                bgcolor=ft.Colors.with_opacity(0.2, userColor),
-                border_radius=5,
-                content=ft.Row(
-                    wrap=True,
-                    width=float("inf"),
-                    spacing=5,
-                    controls=[
-                        ft.Text(
-                            f"{chr(65 + i)}: {text}",
-                            size=18,
-                            weight=ft.FontWeight.BOLD,
-                            color=userColor,
-                            font_family="RacingSansOne-Regular",
-                            # style=ft.TextStyle(
-                            #     shadow=ft.BoxShadow(
-                            #         blur_radius=1,  # 模糊程度，数值越大越像发光
-                            #         color=ft.Colors.with_opacity(
-                            #             0.2, "#ffffff"
-                            #         ),  # 阴影颜色
-                            #         offset=ft.Offset(1, 1),  # 阴影偏移量 (x, y)
-                            #     )
-                            # ),
-                        ),
-                    ],
-                ),
-            )
-            if i >= 0
-            else ft.Container(padding=5, height=10)
-        )
-        return item
-
-    async def schot_exp_capture(self):
-        if not self.running or not self.get_exp_all:
-            self.update_tips("running is not or get_exp_all is None.")
-            return
-        exp_all = self.get_exp_all()
-        if not exp_all:
-            await self.update_tips("No data was obtained.")
-            return
-        await self.update_tips(f"Retrieve {len(exp_all)} data entries.")
-        items = []
-        for i, _exp in enumerate(exp_all):
-            items.append(self.CreateItem(_exp, i))
-            if (i + 1) % 5 == 0 and (i + 1) < len(_exp):
-                items.append(self.CreateItem("", -1))
-        self.neirong.controls = items
-        self.visible = True
-        self.update()
-        # ? 这里可以考虑增加一个“正在生成图片”的提示，或者在外部调用这个函数前就显示提示，毕竟如果数据很多，生成图片可能需要一点时间
-        is_mobile_or_web = self.page.web or self.page.platform in [
-            ft.PagePlatform.ANDROID,
-            ft.PagePlatform.IOS,
-        ]
-        try:
-            image = await self.Screenshot.capture()
-            png_name = f"{self.genid}.png"
-            logr.info(f"{image.__sizeof__()=} {png_name=}")
-
-            save_png = await ft.FilePicker().save_file(
-                file_type=ft.FilePickerFileType.CUSTOM,
-                allowed_extensions=["png"],
-                file_name=png_name,
-                src_bytes=image,
-            )
-            logr.info(f"save_path: {save_png}")
-            if save_png and not is_mobile_or_web:
-                with open(save_png, "wb") as f:
-                    f.write(image)
-                await self.update_tips(f"Storage file directory {png_name}.")
-            await self.update_tips(f"Storage task completed.")
-        except Exception as er:
-            await self.update_tips(f"Image saving error.")
-        finally:
-            await self.espcap_windows()
-
-    def __build__Container(self):
-        self.tips = ft.Text("Photograph", size=16, color=DraculaColors.ORANGE)
-        self.title = ft.Text(
-            "Jackpot Lotter",
-            size=28,
-            weight="bold",
-            font_family="RacingSansOne-Regular",
-            color=DraculaColors.ORANGE,
-            italic=True,
-        )
-        self.footer = self.footer()
-        self.conter = ft.Container(
-            padding=12,
-            bgcolor=DraculaColors.CURRENT_LINE,
-            content=ft.Column(
-                tight=True,
-                spacing=0,
-                controls=[
-                    self.title,
-                    self.contentlist(),
-                    self.footer,
-                ],
-            ),
-        )
-        self.Screenshot = ft.Screenshot(content=self.conter)
-
-        content = ft.Column(
-            controls=[
-                self.Screenshot,
-                self.tips,
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            tight=True,
-        )
-        return content
-
-
-# endregion
-
-
 # region itemC2plus
 class itemC2plus(ft.Container):
     def __init__(self):
         super().__init__()
-        self.timeout = 30
-        self.threshold = 120
+        self.timeout = 60
         self.is_refreshing = False
         self.running = False
-        self.state_exp = "none"  # "ref" "done"
         self.Itemc2_remove = None
         self.fontSize = 25
         self.selected = False
+        self.calc_task_running = False  # 控制后台计算任务是否在运行
+        self.state_exp = "init"  # 状态: init, calculating, done, timeout, error
+        self.elapsed_time = 0.0  # 记录已消耗时间
+        self.tempd = None  # 记录计算结果
+        self.start_time = 0.0
         # 参数
         self.userColor = RandColor()
         self.padding = 15
@@ -234,32 +43,117 @@ class itemC2plus(ft.Container):
         self.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, self.userColor))
         self.bgcolor = ft.Colors.with_opacity(0.1, self.userColor)
         self.content = self.__build_content()
+        self.animate = ft.Animation(300, ft.AnimationCurve.EASE)
 
-    def __build_tips(self):
-        self.tips = ft.Text(
-            value="Please wait...",
-            no_wrap=True,
-            size=13,
-            color=ft.Colors.with_opacity(0.7, DraculaColors.FOREGROUND),
-        )
-        conta = ft.Container(
-            content=self.tips,
-            alignment=ft.Alignment.CENTER_RIGHT,
-            clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-            # border=ft.Border.only(
-            #     left=ft.BorderSide(5, ft.Colors.RED)  # 宽度为5的红色左边框
-            # ),
-            padding=ft.Padding.only(left=5),
-            # 动画配置
-            width=200,
-        )
-        return conta
+    # region generate_data_background
+    async def generate_data_background(self, name: str):
+        if self.calc_task_running:
+            return  # 如果已经在后台计算了，就不重复启动
+
+        logr.info(f"Start Data Generation {name}")
+        self.calc_task_running = True
+        self.state_exp = "calculating"
+        self.start_time = time.time()
+
+        try:
+            while self.state_exp == "calculating":
+                # 后台计算数据
+                tempd, state = await asyncio.to_thread(self.calculate_lottery)
+                current_time = time.time()
+                self.elapsed_time = current_time - self.start_time
+
+                if state:
+                    # 计算成功
+                    self.tempd = tempd
+                    self.state_exp = "done"
+                    break  # 退出计算循环
+                else:
+                    # 超时判断
+                    if self.elapsed_time >= self.timeout:
+                        self.state_exp = "timeout"
+                        break
+                await asyncio.sleep(0.3)  # 给CPU喘息的机会
+
+        except Exception as e:
+            logr.error(f"Error in background data generation: {str(e)}", exc_info=True)
+            self.state_exp = "error"
+        finally:
+            self.calc_task_running = False
+
+    # endregion
+
+    # region update ui
+    async def ui_update_loop(self):
+        # 只要页面在显示（mounted），就持续轮询刷新UI
+        while self.running:
+            self.sync_ui_to_state()
+
+            # 如果状态已经结束，刷新最后一次后跳出UI轮询
+            if self.state_exp in ["done", "timeout", "error"]:
+                break
+
+            await asyncio.sleep(0.3)  # UI 刷新频率
+
+    # ==========================================
+    # 辅助方法：根据当前状态渲染界面
+    # ==========================================
+    def sync_ui_to_state(self):
+        # 安全检查：防止在 unmount 的瞬间调用更新
+        if self.running == False:
+            return
+
+        self.buildBadge.content.value = f"{self.elapsed_time:.2f}"
+        self.buildBadge.update()
+        # logr.info(f'update time {self.elapsed_time:.2f}')
+
+        last_state = getattr(self, "_last_state_exp", None)
+        if self.state_exp == last_state:
+            # 如果状态没有发生改变 则直接跳出
+            return
+
+        if self.state_exp == "calculating":
+            self.showNumber.controls = self.displayshow("Please wait...").controls
+
+        elif self.state_exp == "done":
+            self.showNumber.controls = self.displayNumbers(self.tempd).controls
+
+        elif self.state_exp == "timeout":
+            self.showNumber.controls = self.displayshow(
+                f"Timeout after {self.elapsed_time:.2f}s"
+            ).controls
+
+        elif self.state_exp == "error":
+            self.showNumber.controls = self.displayshow(
+                f"TProgram execution error."
+            ).controls
+
+        self._last_state_exp = self.state_exp
+
+        self.showNumber.update()
+
+    # endregion
 
     def tips_value(self, value: str, color: str = DraculaColors.FOREGROUND):
         self.tips.value = f"{value}"
         self.tips.color = ft.Colors.with_opacity(0.7, color)
         self.tips.tooltip = ft.Tooltip(message=f"{value}")
-        # self.tips.update()
+        self.tips.update()
+
+    def displayshow(self, msg: str, size=35):
+        text = ft.Text(
+            value=f"{msg}",
+            size=size * 0.5,
+            weight=ft.FontWeight.BOLD,
+            color=ft.Colors.with_opacity(0.7, RandColor()),
+        )
+        row = ft.Row(
+            wrap=False,
+            scroll=ft.ScrollMode.HIDDEN,
+            expand=True,
+            spacing=5,
+            controls=[text],
+        )
+        return row
 
     def displayNumbers(self, text: str, size: int = 35):
         """用环形标示 标识出数字"""
@@ -296,16 +190,35 @@ class itemC2plus(ft.Container):
 
     def setting_adjust_position(self, adjustposition: None):
         self.adjust_position = adjustposition
-        logr.info(f"setting adjustposition.")
+        # logr.info(f"setting adjustposition.")
 
+    # region did_mount
     def did_mount(self):
-        if not self.running and not self.is_refreshing and self.state_exp != "done":
-            self.refresh(name="did_mount")
+        # if not self.running and not self.is_refreshing and self.state_exp != "done":
+        #     # self.refresh(name="did_mount")
+        #     self.page.run_task(self.SearchForData, name="did_mount")
+        self.running = True
+        # 1. 启动后台计算任务（如果还没启动，且当前还没计算完成）
+        if not self.calc_task_running and self.state_exp not in [
+            "done",
+            "timeout",
+            "error",
+        ]:
+            self.state_exp = "calculating"
+            self.page.run_task(self.generate_data_background, name="background_task")
+
+        # 2. 页面重新显示时，无条件进行一次UI强同步，保证不漏掉后台已经在算的结果
+        # self.sync_ui_to_state()
+        # 3. 如果后台还在计算中，启动 UI 刷新轮询
+        # if self.state_exp == "calculating":
+        self.page.run_task(self.ui_update_loop)
 
     def will_unmount(self):
         self.running = False
 
-    def __build__badge(self, size: int = 20, text: str = "111"):
+    # endregion
+
+    def __build__badge(self, size: int = 20, text: str = "0"):
         self.buildBadge = ft.Container(
             content=ft.Text(
                 f"{text}",
@@ -315,11 +228,6 @@ class itemC2plus(ft.Container):
                 text_align=ft.TextAlign.CENTER,
             ),
             padding=ft.Padding(8, 5, 8, 5),
-            # width=size,
-            # height=size,
-            bgcolor=DraculaColors.RED,
-            border_radius=size / 2,  # 半径设为宽高的一半即为正圆
-            # alignment=ft.Alignment.CENTER,  # 确保图标在内部居中
         )
         return self.buildBadge
 
@@ -377,7 +285,7 @@ class itemC2plus(ft.Container):
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     expand=1,
                     controls=[
-                        shownumber := self.displayNumbers("05 06 07"),
+                        shownumber := self.displayshow("initialization"),
                         self.__build_check(),
                     ],
                 ),
@@ -386,14 +294,14 @@ class itemC2plus(ft.Container):
                     spacing=5,
                     alignment=ft.MainAxisAlignment.END,
                     controls=[
-                        self.__build_tips(),
+                        # self.__build_tips(),
+                        self.__build__badge(text="0"),
                         self.__build_Butter(
                             26, ft.Icons.REFRESH, self.handle_refresh_data
                         ),
                         self.__build_Butter(
                             26, ft.Icons.DELETE_FOREVER, self.handle_delete
                         ),
-                        self.__build__badge(text="0"),
                     ],
                 ),
             ],
@@ -405,62 +313,16 @@ class itemC2plus(ft.Container):
         self.Itemc2_remove = itemc2remove
 
     def refresh(self, name: str = "None"):
-        if self.is_refreshing or self.selected:
+        if self.calc_task_running or self.selected:
             return
         # logr.info(f"markdata is running. {name}")
-        self.page.run_task(self.SearchForData, name)
+        self.state_exp = "calculating"
+        self.page.run_task(self.generate_data_background, name=name)
+        self.sync_ui_to_state()
 
-    # region SearchForData
-    async def SearchForData(self, name: str):
-        logr.info(f"SearchForData {name}")
-        self.is_refreshing = True
-        count = 0
-        time
-        await asyncio.sleep(0.5)
-        start_time = time.time()
-        try:
-            while True:
-                # 1. 使用 to_thread 运行耗时计算，防止界面卡死
-                # 假设 calculate_lottery 是普通的同步函数
-                # tempd, state = await asyncio.to_thread(self.calculate_lottery)
-                tempd, state = await asyncio.to_thread(self.calculate_lottery)
-                if state:
-                    # 成功情况
-                    self.tempd = tempd
-                    self.showNumber.controls = self.displayNumbers(tempd).controls
-                    self.tips_value("Search successful.", DraculaColors.GREEN)
-                    self.state_exp = "done"
-                    self.update()
-                    break  # 成功后直接跳出循环
-                else:
-                    # 失败但未达到上限，更新 UI 并稍作等待
-                    self.showNumber.controls = self.displayNumbers(tempd).controls
-                    # self.showNumber.color = DraculaColors.ORANGE
-                    self.buildBadge.content.value = f"{count}"
-                    self.tips_value(
-                        "We are searching diligently, please wait...",
-                        DraculaColors.ORANGE,
-                    )
-                    self.state_exp = "ref"
-                    self.update()
-                    await asyncio.sleep(0.1)  # 给 CPU 喘息时间，也让 UI 有机会渲染
-                count += 1
-                elapsed_time = time.time() - start_time
-                if elapsed_time >= self.timeout:
-                    self.tips_value(
-                        "Count is max_retries, work stoping.", DraculaColors.RED
-                    )
-                    self.state_exp = "none"
-                    self.update()
-                    break
-        except Exception as e:
-            # 显示错误/超时界面
-            self.tips_value("Program execution error.", DraculaColors.YELLOW)
-            self.update()
-        finally:
-            self.is_refreshing = False
-
-    # endregion
+        # 3. 如果后台还在计算中，启动 UI 刷新轮询
+        if self.state_exp == "calculating":
+            self.page.run_task(self.ui_update_loop)
 
     def calculate_lottery(self):
         settings = self.page.session.store.get("settings")
@@ -479,7 +341,7 @@ class itemC2plus(ft.Container):
 
     def handle_refresh_data(self, e):
         """右滑逻辑：刷新数据"""
-        logr.info("向右滑动：正在刷新数据...")
+        # logr.info("向右滑动：正在刷新数据...")
         self.refresh(name="refresh_data")
         self.page.show_dialog(ft.SnackBar(f"handle refresh data."))
 
@@ -544,7 +406,7 @@ class itemsList(ft.Container):
             control.controls.append(temp)
             self.update()
 
-    def all_refresh(self):
+    async def all_refresh(self):
         """全部刷新"""
         control = self.content
         if not isinstance(control, ft.Column):
@@ -554,6 +416,7 @@ class itemsList(ft.Container):
         for item in itemc2_all:
             if item.selected == False:
                 item.refresh(name="all_refresh")
+                await asyncio.sleep(0.2)
 
     def get_item_exp(self):
         """"""
@@ -606,12 +469,16 @@ class commandList(ft.Container):
         self.itemc2remove = None
         self.all_refresh = None
         self.shot_capture = None
+        self.get_exp_all = None
 
     def did_mount(self):
         self.running = True
 
     def will_unmount(self):
         self.running = False
+
+    def setting_get_exp_all(self, getexpall: list = None):
+        self.get_exp_all = getexpall
 
     def setting_shot_capture(self, capture=None):
         self.shot_capture = capture
@@ -651,6 +518,7 @@ class commandList(ft.Container):
             alignment=ft.Alignment.CENTER,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)),
             border_radius=8,
+            animate=ft.Animation(300, ft.AnimationCurve.EASE),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
@@ -658,7 +526,7 @@ class commandList(ft.Container):
                 controls=[
                     ft.Icon(icon, size=size * 0.45, color=DraculaColors.PURPLE),
                     ft.Text(
-                        value=f"{name.upper()}",
+                        value=f"{name}",
                         size=size * 0.15,
                         text_align=ft.TextAlign.CENTER,
                     ),
@@ -677,7 +545,10 @@ class commandList(ft.Container):
                     icon=ft.Icons.INSERT_EMOTICON, name="ADD", oncilck=self.handle_add
                 ),
                 self.__build_butter(
-                    icon=ft.Icons.REFRESH, name="Refresh", oncilck=self.handle_refresh
+                    icon=ft.Icons.SCIENCE, name="TEST", oncilck=self.handle_test
+                ),
+                self.__build_butter(
+                    icon=ft.Icons.REFRESH, name="REFRESH", oncilck=self.handle_refresh
                 ),
                 self.__build_butter(
                     icon=ft.Icons.SAVE_AS, name="Export", oncilck=self.handle_export
@@ -689,9 +560,16 @@ class commandList(ft.Container):
             scroll=ft.ScrollMode.HIDDEN,
         )
 
+    def handle_test(self, e):
+        tdb = testdialog()
+        self.page.show_dialog(tdb)
+
     def handle_export(self, e):
-        if self.shot_capture:
-            self.page.run_task(self.shot_capture)
+        # if self.shot_capture:
+        #     self.page.run_task(self.shot_capture)
+        sdb = savedialog()
+        sdb.seting_get_all_exp(self.get_exp_all)
+        self.page.show_dialog(sdb)
 
     def handle_add(self, e):
         """执行add"""
@@ -700,7 +578,7 @@ class commandList(ft.Container):
 
     def handle_refresh(self, e):
         if self.all_refresh:
-            self.all_refresh()
+            self.page.run_task(self.all_refresh)
 
 
 # endregion
@@ -714,24 +592,115 @@ class lucktips(ft.Container):
         self.width = float("inf")
         self.padding = 10
         self.content = self.__build_tips()
+        self.cooldown_seconds = 900
+
+    def fetch_random_quote(self):
+        """同步方法：负责请求数据和解析数据"""
+        # 优化2：将 API URL 和对应的解析逻辑封装在一起，方便扩展
+        api_sources = [
+            {
+                "name": "Hitokoto",
+                "url": "https://v1.hitokoto.cn",
+                # 解析 hitokoto 的 JSON
+                "parse": lambda d: (
+                    f"{d.get('hitokoto', 'no motto')} —— {d.get('from_who') or 'Unknown'}"
+                ),
+            },
+            {
+                "name": "DummyJSON (英文)",
+                "url": "https://dummyjson.com/quotes/random",
+                "parse": lambda d: (
+                    f"{d.get('quote', 'No content')} —— {d.get('author', 'Unknown')}"
+                ),
+            },
+            {
+                "name": "ZenQuotes (英文)",
+                "url": "https://zenquotes.io/api/random",
+                "parse": lambda d: (
+                    f"{d[0].get('q', 'No content')} —— {d[0].get('a', 'Unknown')}"
+                    if isinstance(d, list) and len(d) > 0
+                    else "Parse Error"
+                ),
+            },
+        ]
+
+        # 随机选择一个 API
+        source = random.choice(api_sources)
+        logr.info(f"Selected Quote API: {source['name']} - URL: {source['url']}")
+
+        try:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            response = requests.get(source["url"], headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+
+            # 使用对应 API 的解析函数提取文字
+            return source["parse"](data)
+
+        except Exception as ex:
+            logr.error(f"Quote API Error ({source['name']}): {ex}")
+            # 请求失败时返回默认兜底文案
+            return "愿你所有的好运都不期而遇，愿你所有的努力都有岁月的温柔回馈。✨"
+
+    def did_mount(self):
+        self.running = True
+        self.page.run_task(self.motto_loop)
+
+    def will_unmount(self):
+        self.running = False
+
+    async def motto_loop(self):
+        """异步循环任务：更新数据并等待 15 分钟"""
+        await asyncio.sleep(1)
+        while self.running:
+            last_fetch_time = self.page.session.store.get("lucktips_last_time") or 0
+            cached_quote = self.page.session.store.get("lucktips_last_text")
+            current_time = time.time()
+            elapsed_time = current_time - last_fetch_time
+            if elapsed_time >= self.cooldown_seconds or not cached_quote:
+                # 触发真实网络请求
+                info = await asyncio.to_thread(self.fetch_random_quote)
+
+                # 更新 Session 缓存（记录新的时间和内容）
+                self.page.session.store.set("lucktips_last_time", time.time())
+                self.page.session.store.set("lucktips_last_text", info)
+            else:
+                # 时间没到，直接使用缓存的句子
+                info = cached_quote
+
+            # 直接更新文本控件并刷新组件
+            self.motto.value = info
+            self.motto.update()
+            last_fetch_time = self.page.session.store.get("lucktips_last_time")
+            remaining_seconds = int(
+                (last_fetch_time + self.cooldown_seconds) - time.time()
+            )
+
+            # 防止出现负数或 0 死循环
+            if remaining_seconds <= 0:
+                remaining_seconds = 1
+
+            # 开始倒计时休眠，随时监听 self.running 以便在页面切换时打断休眠
+            for _ in range(remaining_seconds):
+                if not self.running:
+                    return  # 页面被切走，直接结束当前组件的后台循环
+                await asyncio.sleep(1)
 
     def __build_text(self, text: str = "Luck word."):
-        return ft.Text(
+        self.motto = ft.Text(
             value=f"{text}",
             size=15,
             color=ft.Colors.with_opacity(0.5, DraculaColors.FOREGROUND),
             max_lines=2,
         )
+        return self.motto
 
     def __build_tips(self):
         content = ft.Column(
             controls=[
                 self.__build_text(
                     "愿你所有的好运都不期而遇，愿你所有的努力都有岁月的温柔回馈。✨"
-                ),
-                self.__build_text(
-                    "May all the good luck come to you unexpectedly, and may all your hard work be rewarded with the gentleness of time. 🕊️"
-                ),
+                )
             ],
         )
         return content
@@ -743,16 +712,17 @@ class lucktips(ft.Container):
 # region LotteryPage
 class LotteryPage:
     def __init__(self):
-        self.Photograph = Photograph()
+        # self.Photograph = Photograph()
         self.itemslist = itemsList()
         self.comandlist = commandList()
         # self.serendipitous_Capture = serendipitousCapture()
 
-        self.Photograph.setting_get_exp_all(self.itemslist.get_item_exp)
+        # self.Photograph.setting_get_exp_all(self.itemslist.get_item_exp)
         self.comandlist.setting_item_list_add(
             self.itemslist.add_itemc2, self.itemslist.remove_item
         )
-        self.comandlist.setting_shot_capture(self.Photograph.schot_exp_capture)
+        self.comandlist.setting_get_exp_all(self.itemslist.get_item_exp)
+        # self.comandlist.setting_shot_capture(self.Photograph.schot_exp_capture)
         self.comandlist.setting_all_refresh(self.itemslist.all_refresh)
         self.luckTips = lucktips()
         self.view = self.get_data_view()
@@ -772,7 +742,7 @@ class LotteryPage:
                 self.luckTips,
                 self.itemslist,
                 self.comandlist,
-                self.Photograph,
+                # self.Photograph,
             ],
             expand=True,
             scroll=ft.ScrollMode.HIDDEN,

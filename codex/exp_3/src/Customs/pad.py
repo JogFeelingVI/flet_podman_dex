@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-02-22 17:29:51
+# @Last Modified time: 2026-03-04 01:10:14
 
 from .DraculaTheme import DraculaColors, RandColor
 import re
@@ -47,11 +47,11 @@ class paditem(ft.Container):
         result = re.findall(pattern, text)
         if result == []:
             result = ["Noempty"]
-        print(f"Parsing text: '{text}' -> {result}")
+        # print(f"Parsing text: '{text}' -> {result}")
         for part in result:
             if part.startswith("{") and part.endswith("}"):
                 _n = part[1:-1]
-                print(f"_n {_n} -> {part}")
+                # # print(f"_n {_n} -> {part}")
                 if _n == "n":
                     _n = random.randint(0, 9)
                 elif _n == "n+":
@@ -136,7 +136,7 @@ class paditem(ft.Container):
         edit.visible = False
         black.update()
         cmd = self.command()
-        print(f"Command after edit: {cmd}")
+        # # print(f"Command after edit: {cmd}")
 
     def handle_change(self, show: ft.Text, edit: ft.TextField):
         show.value = edit.value
