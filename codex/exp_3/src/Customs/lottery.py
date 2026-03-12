@@ -2,11 +2,12 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-05 02:48:25
+# @Last Modified time: 2026-03-10 07:42:36
 
-from .Savedialogbox import savedialog, testdialog
+
+from .Savedialogbox import savedialog, tadbx
 from .jackpot_core import randomData, filter_for_pabc
-from .DraculaTheme import DraculaColors, RandColor
+from .DraculaTheme import DraculaColors, RandColor, HarmonyColors
 from .loger import logr
 import flet as ft
 import os
@@ -37,11 +38,15 @@ class itemC2plus(ft.Container):
         self.tempd = None  # 记录计算结果
         self.start_time = 0.0
         # 参数
-        self.userColor = RandColor()
-        self.padding = 15
+        self.userColor = RandColor(mode="neon")
+        self.bgc = HarmonyColors(
+            base_hex_color=self.userColor, harmony_type="split", mode="neon"
+        )
+        self.padding = 8
         self.border_radius = 10
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, self.userColor))
-        self.bgcolor = ft.Colors.with_opacity(0.1, self.userColor)
+        self.gradient = ft.LinearGradient(
+            colors=[ft.Colors.with_opacity(0.2, x) for x in self.bgc]
+        )
         self.content = self.__build_content()
         self.animate = ft.Animation(300, ft.AnimationCurve.EASE)
 
@@ -133,18 +138,12 @@ class itemC2plus(ft.Container):
 
     # endregion
 
-    def tips_value(self, value: str, color: str = DraculaColors.FOREGROUND):
-        self.tips.value = f"{value}"
-        self.tips.color = ft.Colors.with_opacity(0.7, color)
-        self.tips.tooltip = ft.Tooltip(message=f"{value}")
-        self.tips.update()
-
     def displayshow(self, msg: str, size=35):
         text = ft.Text(
             value=f"{msg}",
             size=size * 0.5,
             weight=ft.FontWeight.BOLD,
-            color=ft.Colors.with_opacity(0.7, RandColor()),
+            color=ft.Colors.with_opacity(0.7, RandColor(mode="neon")),
         )
         row = ft.Row(
             wrap=False,
@@ -240,12 +239,20 @@ class itemC2plus(ft.Container):
             # e.control.update()
             self.selected = not self.selected
             self.check.bgcolor = (
-                ft.Colors.with_opacity(0.6, DraculaColors.GREEN)
+                ft.Colors.with_opacity(0.6, RandColor(mode="neon", hue="Green"))
                 if self.selected
                 else None
             )
             rows: ft.Column = self.content
             rows.controls[1].visible = not self.selected
+            if self.selected:
+                self.border = ft.Border(
+                    left=ft.BorderSide(5, ft.Colors.with_opacity(1, self.userColor)),
+                )
+            else:
+                # self.border_radius = 10
+                self.border = None
+
             if self.adjust_position and self.selected:
                 self.adjust_position(self)
                 logr.info("adjust_position is self.")
@@ -511,12 +518,12 @@ class commandList(ft.Container):
             handle_hover(ft.Event(name="hover", control=conter, data=False))
 
         # end
-
+        uColor = RandColor(mode="Morandi")
         conter = ft.Container(
             width=size,
             height=size,
             alignment=ft.Alignment.CENTER,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, uColor)),
             border_radius=8,
             animate=ft.Animation(300, ft.AnimationCurve.EASE),
             content=ft.Column(
@@ -524,7 +531,7 @@ class commandList(ft.Container):
                 spacing=5,
                 alignment=ft.MainAxisAlignment.CENTER,
                 controls=[
-                    ft.Icon(icon, size=size * 0.45, color=DraculaColors.PURPLE),
+                    ft.Icon(icon, size=size * 0.45, color=uColor),
                     ft.Text(
                         value=f"{name}",
                         size=size * 0.15,
@@ -561,15 +568,15 @@ class commandList(ft.Container):
         )
 
     def handle_test(self, e):
-        tdb = testdialog()
-        self.page.show_dialog(tdb)
+        tdb = tadbx()
+        self.page.show_dialog(tdb.adb)
 
     def handle_export(self, e):
         # if self.shot_capture:
         #     self.page.run_task(self.shot_capture)
         sdb = savedialog()
         sdb.seting_get_all_exp(self.get_exp_all)
-        self.page.show_dialog(sdb)
+        self.page.show_dialog(sdb.adb)
 
     def handle_add(self, e):
         """执行add"""

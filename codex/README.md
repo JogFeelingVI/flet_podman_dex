@@ -89,3 +89,8 @@ DejaVuSansMono.ttf: "DejaVu Sans Mono" "Book"
 - https://github.com/JogFeelingVI/lotter_resource/raw/refs/heads/main/fonts.json
 - https://gitee.com/jogfeelingvi/lotter_resource/raw/main/fonts.json
 
+
+#### reds
+- clever-moray-5961.upstash.io
+- ARdJAAImcDIzMTUzOWI5ZGMwZTI0NTNjYTdiNzZlNWJiN2RhNmIxYnAyNTk2MQ
+- AhdJAAIgcDILOP8tgGCLshQ7chYnsp8sLl8IhwOhX_v_ojSfzJN5cQ

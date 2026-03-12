@@ -2,10 +2,11 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-04 09:25:06
+# @Last Modified time: 2026-03-12 07:48:09
 
-from .DraculaTheme import DraculaColors, RandColor
+from .DraculaTheme import DraculaColors, RandColor, HarmonyColors
 from .jackpot_core import randomData
+from .Savedialogbox import upstashtoken
 from .loger import logr
 import flet as ft
 import json
@@ -94,7 +95,10 @@ class input_user_rule(ft.Container):
         super().__init__()
         self.textbox_list = []
         self.visible = False
-        self.userColor = RandColor()
+        self.userColor = RandColor(mode="glass")
+        self.complementary = HarmonyColors(
+            base_hex_color=self.userColor, harmony_type="complementary", mode="neon"
+        )
         self.content = self.__build_card()
         self.render_filters = None
         self.row_name_char = 65
@@ -127,6 +131,7 @@ class input_user_rule(ft.Container):
 
     def __command_button(self):
         """Add, Apply, Cancel"""
+
         return ft.Row(
             controls=[
                 ft.TextButton(
@@ -142,7 +147,7 @@ class input_user_rule(ft.Container):
                     expand=1,
                     icon=ft.Icons.WINDOW,
                     style=ft.ButtonStyle(
-                        bgcolor=self.userColor,
+                        bgcolor=ft.Colors.with_opacity(0.5, self.userColor),
                         color=DraculaColors.BACKGROUND,
                         shape=ft.RoundedRectangleBorder(radius=5),
                     ),
@@ -262,7 +267,7 @@ class input_user_rule(ft.Container):
                     content=ft.Text(
                         "Add new game rules.",
                         size=16,
-                        color=ft.Colors.with_opacity(0.6, self.userColor),
+                        color=ft.Colors.with_opacity(0.6, DraculaColors.BACKGROUND),
                     ),
                 ),
                 ft.Container(
@@ -473,11 +478,12 @@ class showRulev2(ft.Container):
                 # PA Number Selection Rules: Choose 5 out of 36.
                 if item["enabled"] == False:
                     continue
-                ranges = item.get("range_end", 0)
+                rangea = item.get("range_start", 0)
+                rangeb = item.get("range_end", 0)
                 count = item.get("count", 0)
                 rules.append(
                     ft.Text(
-                        value=f"{key} Number Selection Rules: Choose {count} out of {ranges}.",
+                        value=f"{key} from {rangea}-{rangeb}, select {count} numbers.",
                         size=16,
                         color=ft.Colors.with_opacity(
                             0.6, color=DraculaColors.FOREGROUND
@@ -487,7 +493,7 @@ class showRulev2(ft.Container):
                 # end
         example = randomData(seting=pn).get_exp()
         return self._create_card_container(
-            bgcolor_opacity=0.1,
+            bgcolor_opacity=0.2,
             controls=[
                 ft.Text(
                     "BASIC NUMBER SELECTION RULES",
@@ -506,7 +512,7 @@ class showRulev2(ft.Container):
 
     def display_note(self, note: str):
         return self._create_card_container(
-            bgcolor_opacity=0.3,
+            bgcolor_opacity=0.4,
             controls=[
                 ft.Text(
                     "RULES AND REGULATIONS",
@@ -519,11 +525,19 @@ class showRulev2(ft.Container):
 
     def _create_card_container(self, bgcolor_opacity: float, controls: list):
         """提取的公共卡片容器样式构建器"""
+        bgop = bgcolor_opacity if bgcolor_opacity else 0.3
+        bg = RandColor()
+        bgc = HarmonyColors(base_hex_color=bg, harmony_type="analogous", mode="neon")
         return ft.Container(
             padding=12,
             border_radius=10,
             width=float("inf"),
-            bgcolor=ft.Colors.with_opacity(bgcolor_opacity, RandColor()),
+            # bgcolor=ft.Colors.with_opacity(bgcolor_opacity, RandColor()),
+            gradient=ft.LinearGradient(
+                colors=[ft.Colors.with_opacity(bgop, x) for x in bgc],
+                begin=ft.Alignment.CENTER_LEFT,
+                end=ft.Alignment.CENTER_RIGHT,
+            ),
             animate=ft.Animation(600, ft.AnimationCurve.EASE),
             content=ft.Column(
                 spacing=5,
@@ -576,7 +590,7 @@ class DefaultSettings(ft.Container):
 
     def __init__(self):
         super().__init__()
-        self.userColor = RandColor()
+        self.userColor = RandColor(mode="Glass")
         self.width = float("inf")
         self.border = ft.Border.all(
             1, ft.Colors.with_opacity(0.6, DraculaColors.COMMENT)
@@ -613,10 +627,20 @@ class DefaultSettings(ft.Container):
             for k, item in Lotter_Data.items():
                 description = item.get("description", "")
                 button_list.append(
-                    ft.TextButton(
-                        content=f"{k}",
+                    # ft.TextButton(
+                    #     content=f"{k}",
+                    #     tooltip=ft.Tooltip(message=description),
+                    #     # 【重要】使用默认参数 data=item 来破解 Lambda 闭包陷阱
+                    #     on_click=lambda e, name=k, data=item, desc=description: (
+                    #         self.save_preset_to_file(name, data, desc)
+                    #     ),
+                    # )
+                    ft.Container(
+                        padding=3,
+                        border_radius=3,
+                        bgcolor=ft.Colors.TRANSPARENT,
+                        content=ft.Text(f"{k}", size=15, color=RandColor(mode="Glass")),
                         tooltip=ft.Tooltip(message=description),
-                        # 【重要】使用默认参数 data=item 来破解 Lambda 闭包陷阱
                         on_click=lambda e, name=k, data=item, desc=description: (
                             self.save_preset_to_file(name, data, desc)
                         ),
@@ -670,8 +694,8 @@ class DefaultSettings(ft.Container):
 
     async def Regenerate_handle_click(self, e):
         id = f"{randomData.generate_secure_string(8)}"
-        self.stored_id = os.path.join(app_temp_path, f"gen_{id}.dict")
-        filePath = pathlib.Path(self.stored_id)
+        self.stored_path = os.path.join(app_temp_path, f"gen_{id}.dict")
+        filePath = pathlib.Path(self.stored_path)
         for item in filePath.parent.iterdir():
             if (
                 item.is_file() or item.is_symlink() and item.name.startswith("gen_")
@@ -680,7 +704,8 @@ class DefaultSettings(ft.Container):
                 item.unlink()
         filePath.parent.mkdir(parents=True, exist_ok=True)
         filePath.write_text("")
-        await ft.SharedPreferences().set("stored_id", self.stored_id)
+        storedid = {"path": self.stored_path, "id": id}
+        await ft.SharedPreferences().set("storedid", json.dumps(storedid))
         self.page.show_dialog(ft.SnackBar(f"Regenerate id {id}"))
 
     def __build_card(self):
@@ -691,18 +716,26 @@ class DefaultSettings(ft.Container):
             wrap=True,
             alignment=ft.MainAxisAlignment.START,
         )
+        nr_mainc = RandColor(mode="glass")
+        nr_compe = HarmonyColors(
+            base_hex_color=nr_mainc, harmony_type="split", mode="morandi"
+        )[0]
         add_rule = ft.Button(
-            bgcolor=DraculaColors.GREEN,
-            color=DraculaColors.BACKGROUND,
+            bgcolor=ft.Colors.with_opacity(0.5, nr_compe),
+            color=DraculaColors.FOREGROUND,
             icon=ft.Icons.ADD_CIRCLE_OUTLINE,
             content="new rule",
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
             tooltip=ft.Tooltip(message="new game rule"),
             on_click=self.handle_add_rule,
         )
+        re_mainc = RandColor(mode="glass")
+        re_compe = HarmonyColors(
+            base_hex_color=re_mainc, harmony_type="split", mode="morandi"
+        )[0]
         Regenerate = ft.Button(
-            bgcolor=ft.Colors.with_opacity(0.7, self.userColor),
-            color=DraculaColors.BACKGROUND,
+            bgcolor=ft.Colors.with_opacity(0.5, re_compe),
+            color=DraculaColors.FOREGROUND,
             icon=ft.Icons.REFRESH,
             content="Regenerate",
             style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
@@ -739,6 +772,97 @@ class DefaultSettings(ft.Container):
 
 # endregion
 
+# region Remote synchronization upstash
+
+
+class rsup(ft.Container):
+    """Remote synchronization upstash"""
+
+    def __init__(self):
+        super().__init__()
+        self.mainColor = RandColor(hue="green")
+        self.splitColor = HarmonyColors(
+            base_hex_color=self.mainColor, harmony_type="triadic", mode="neon"
+        )
+        self.Token = ""
+        self.padding = 10
+        self.gradient = self.__gradient()
+        self.width = float("inf")
+        self.border_radius = 14
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.splitColor[0]))
+        self.alignment = ft.Alignment.CENTER
+        self.running = False
+        self.content = self.__build_conter()
+
+    def did_mount(self):
+        self.running = True
+        self.page.run_task(self.verdict_shows)
+
+    def will_unmount(self):
+        self.running = False
+
+    async def verdict_shows(self):
+        jsondata = await ft.SharedPreferences().get("upstash")
+        if jsondata:
+            self.tokenbt.content = f"Token Activation"
+            self.tokenbt.update()
+
+    def __build_conter(self):
+        bgc = RandColor(mode="neon", hue="green")
+        row = ft.Row(
+            spacing=5,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.Image(
+                    src="upstash-white-bg.svg",
+                    height=35,
+                    width=35 * 3.45,
+                    repeat=ft.ImageRepeat.NO_REPEAT,
+                    fit=ft.BoxFit.CONTAIN,
+                ),
+                tokenbt := ft.Button(
+                    content="Enter your token",
+                    icon=ft.Icons.TOKEN,
+                    icon_color=ft.Colors.BLACK,
+                    color=ft.Colors.BLACK,
+                    bgcolor=bgc,
+                    on_click=self.handle_cilck,
+                ),
+            ],
+        )
+        self.tokenbt = tokenbt
+        return row
+
+    def __gradient(self):
+        grd = ft.LinearGradient(
+            begin=ft.Alignment.CENTER_LEFT,  # 渐变开始位置（上方）
+            end=ft.Alignment.CENTER_RIGHT,  # 渐变结束位置（下方）
+            colors=[
+                ft.Colors.with_opacity(0.7, x) for x in self.splitColor
+            ],  # 颜色从蓝到黑
+        )
+        return grd
+
+    async def handle_cilck(self):
+        token = upstashtoken()
+        token.setting_apply_callback(self.handle_callback)
+        self.page.show_dialog(token.adb)
+        jsondata = await ft.SharedPreferences().get("upstash")
+        if jsondata:
+            token.setting_valid_info(jsondata=jsondata)
+
+    async def handle_callback(self, jsondata: str):
+        if jsondata:
+            # logr.info(f"callback: {jsondata}")
+            if isinstance(jsondata, dict):
+                jsondata = json.dumps(jsondata)
+            await ft.SharedPreferences().set("upstash", json.dumps(jsondata))
+            self.page.run_task(self.verdict_shows)
+
+
+# endregion
+
 
 # region SetingsPage
 class SetingsPage:
@@ -748,7 +872,7 @@ class SetingsPage:
         self.rule_mode_show = showRulev2()
         self.uese_input_mode = input_user_rule()
         self.default_setings = DefaultSettings()
-        # self.User_Directory = UserDirectory()
+        self.rsupd = rsup()
         self.apply_rule = {}
 
         self.uese_input_mode.setting_render_filters(self.render_filters)
@@ -809,6 +933,7 @@ class SetingsPage:
                 self.rule_mode_show,
                 self.default_setings,
                 self.uese_input_mode,
+                self.rsupd,
             ],
             expand=True,
             scroll=ft.ScrollMode.HIDDEN,
