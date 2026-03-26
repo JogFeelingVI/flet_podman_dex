@@ -5,13 +5,15 @@
 # @Last Modified time: 2026-03-12 05:00:48
 
 
-from .DraculaTheme import DraculaColors, RandColor, HarmonyColors
 import flet as ft
+
+from .DraculaTheme import HarmonyColors, RandColor
 
 
 class adbx(ft.AlertDialog):
-    def __init__(self, uc: str, content: ft.Control):
+    def __init__(self, uc: str, content: ft.Control, Child_padding: int = 12):
         self.userColor = uc if uc else RandColor(mode="neon")
+        self.child_padding = Child_padding
         self.shape = ft.RoundedRectangleBorder(
             radius=10,
             side=ft.BorderSide(1, self.userColor),  # 宽度为2，颜色为蓝色
@@ -45,7 +47,7 @@ class adbx(ft.AlertDialog):
             base_hex_color=self.userColor, harmony_type="analogous", mode="neon"
         )
         conter = ft.Container(
-            padding=12,
+            padding=self.child_padding,
             width=400,
             blur=ft.Blur(sigma_x=5, sigma_y=5, tile_mode=ft.BlurTileMode.MIRROR),
             border_radius=10,

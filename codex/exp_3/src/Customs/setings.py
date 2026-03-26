@@ -2,19 +2,21 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-12 07:48:09
+# @Last Modified time: 2026-03-23 05:26:35
 
-from .DraculaTheme import DraculaColors, RandColor, HarmonyColors
-from .jackpot_core import randomData
-from .Savedialogbox import upstashtoken
-from .loger import logr
-import flet as ft
-import json
-import os
-import re
 import asyncio
+import os
 import pathlib
-import random
+import re
+
+import flet as ft
+
+from .byterfiles import BinaryConverter as bc
+from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
+from .jackpot_core import randomData
+from .loger import logr
+from .Savedialogbox import upstashtoken
+from .svgbase64 import svgimage
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
@@ -323,9 +325,12 @@ class input_user_rule(ft.Container):
                 continue
 
         global jackpot_seting
-        with open(jackpot_seting, "w", encoding="utf-8") as f:
-            json.dump(temp, f, indent=4, ensure_ascii=False)
-        self.page.session.store.set("settings", temp)
+        # with open(jackpot_seting, "w", encoding="utf-8") as f:
+        #     json.dump(temp, f, indent=4, ensure_ascii=False)
+        bc.save(jackpot_seting, temp)
+        b64str = bc.to_base64(temp)
+        if b64str:
+            self.page.session.store.set("settings", b64str)
         if self.render_filters:
             self.render_filters()
         self.handle_Cancel()
@@ -343,55 +348,16 @@ class showRulev2(ft.Container):
             1, ft.Colors.with_opacity(0.4, DraculaColors.ORANGE)
         )
         self.border_radius = 10
-        self.runloadpage = False
+        self.running = False
         self.clip_behavior = ft.ClipBehavior.HARD_EDGE
         self.content = self.__build_content()
 
     def did_mount(self):
         self.running = True
-        if not self.runloadpage:
-            # self.page.run_task(self.loadpage)
-            self.page.run_task(self.__update_card)
+        self.page.run_task(self.__update_card)
 
     def will_unmount(self):
         self.running = False
-
-    async def loadpage(self):
-        if self.runloadpage:
-            await asyncio.sleep(0.2)
-            for _b in self._stack.controls:
-                if _b.data == "_black":
-                    _b.bgcolor = ft.Colors.with_opacity(0.2, RandColor())
-                    _b.update()
-            return
-
-        def offset():
-            refcan = {"x": [1, 200], "y": [1, 10]}
-            _offset = {name: random.randint(x, y) for name, (x, y) in refcan.items()}
-            return _offset
-
-        def black():
-            color = RandColor()
-            size = random.randint(5, 30)
-            return ft.Container(
-                data="_black",
-                width=size,
-                height=size,
-                bgcolor=ft.Colors.with_opacity(0.2, color),
-                border_radius=size / 2,
-                offset=ft.Offset(**offset()),
-                opacity=random.uniform(0.3, 1),
-                animate=300,
-            )
-
-        [self._stack.controls.insert(0, black()) for _ in range(70)]
-        await asyncio.sleep(0.2)
-        self.runloadpage = True
-        self._stack.update()
-        for _b in self._stack.controls:
-            if _b.data == "_black":
-                _b.bgcolor = ft.Colors.with_opacity(0.2, RandColor())
-                _b.update()
 
     def __build_content(self):
         """pass"""
@@ -431,21 +397,19 @@ class showRulev2(ft.Container):
 
     async def __load_json_setting(self):
         apply_rule = self.page.session.store.get("settings")
-        if apply_rule:
-            return apply_rule
-        json_path = pathlib.Path(jackpot_seting)
-        if not json_path.exists():
-            return
+        setting_b64 = bc.from_base64(apply_rule)
+        if setting_b64:
+            return setting_b64
         try:
-            with json_path.open(mode="r", encoding="UTF-8") as r:
-                temp = json.load(r)
-                # logr.info(f'temp: {temp}')
-                self.page.session.store.set("settings", temp)
-                return temp
+            load_setting_b64 = bc.load(jackpot_seting)
+            b64str = bc.to_base64(load_setting_b64)
+            if b64str:
+                self.page.session.store.set("settings", b64str)
+            return load_setting_b64
         except Exception as er:
             self.update_tips("Load json setting run error.", "#ee0f0f")
-            logr.error(f"__load_json_setting run error.", {er})
-            return
+            logr.error("__load_json_setting run error.", {er})
+            return None
 
     async def __update_card(self):
         self.update_tips(
@@ -469,14 +433,13 @@ class showRulev2(ft.Container):
             self.display_rules(randomDatax),
         ]
         self._content_column.update()
-        self.runloadpage = True
 
     def display_rules(self, pn: dict):
         rules = []
         for key, item in pn.items():
             if f"{key}".lower().startswith("p") and isinstance(item, dict):
                 # PA Number Selection Rules: Choose 5 out of 36.
-                if item["enabled"] == False:
+                if not item["enabled"]:
                     continue
                 rangea = item.get("range_start", 0)
                 rangeb = item.get("range_end", 0)
@@ -550,32 +513,22 @@ class showRulev2(ft.Container):
         """用环形标示 标识出数字"""
         result = re.findall(r"\d+|\+", text)
         row = ft.Row(
-            wrap=True,
-            # expand=True,
-            spacing=5,
-            run_spacing=5,
+            wrap=False,
+            scroll=ft.ScrollMode.HIDDEN,
+            expand=True,
+            spacing=2,
         )
-        colors = [["#d9dbdf", "#747fdf"], ["#eab425", "#fbbf24"]]
-        quan, shuzi = colors[0]
+        colors = ["#aab1ee", "#eab425"]
+        uc = colors[0]
         for key in result:
             if key == "+":
-                quan, shuzi = colors[1]
+                uc = colors[1]
                 continue
-            item = ft.Container(
-                content=ft.Text(
-                    value=f"{key}",
-                    size=size * 0.5,  # 字体大小约为容器的一半
-                    weight=ft.FontWeight.BOLD,
-                    color=shuzi,  # 文字建议也用金色系或对比色
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                bgcolor=ft.Colors.TRANSPARENT,  # 背景透明
-                border=ft.Border.all(1, quan),
+            item = ft.Image(
+                src=svgimage(key),
                 width=size,
                 height=size,
-                border_radius=size / 2,
-                # padding=ft.Padding.all(5),
-                alignment=ft.Alignment.CENTER,
+                color=uc,
             )
             row.controls.append(item)
         return row
@@ -627,14 +580,6 @@ class DefaultSettings(ft.Container):
             for k, item in Lotter_Data.items():
                 description = item.get("description", "")
                 button_list.append(
-                    # ft.TextButton(
-                    #     content=f"{k}",
-                    #     tooltip=ft.Tooltip(message=description),
-                    #     # 【重要】使用默认参数 data=item 来破解 Lambda 闭包陷阱
-                    #     on_click=lambda e, name=k, data=item, desc=description: (
-                    #         self.save_preset_to_file(name, data, desc)
-                    #     ),
-                    # )
                     ft.Container(
                         padding=3,
                         border_radius=3,
@@ -682,13 +627,10 @@ class DefaultSettings(ft.Container):
                     "range_end": preset_data[k][1],
                     "count": preset_data[count_key],
                 }
-
-        with open(jackpot_seting, "w", encoding="utf-8") as f:
-            json.dump(valid_json, f, indent=4, ensure_ascii=False)
-            # self.page.show_dialog(
-            #     get_snack_bar(f"Preset '{name}' has been applied and saved.")
-            # )
-        self.page.session.store.set("settings", valid_json)
+        bc.save(jackpot_seting, valid_json)
+        b64str = bc.to_base64(valid_json)
+        if b64str:
+            self.page.session.store.set("settings", b64str)
         if self.render_filters:
             self.render_filters()
 
@@ -705,8 +647,10 @@ class DefaultSettings(ft.Container):
         filePath.parent.mkdir(parents=True, exist_ok=True)
         filePath.write_text("")
         storedid = {"path": self.stored_path, "id": id}
-        await ft.SharedPreferences().set("storedid", json.dumps(storedid))
-        self.page.show_dialog(ft.SnackBar(f"Regenerate id {id}"))
+        b64str = bc.to_base64(storedid)
+        if b64str:
+            await ft.SharedPreferences().set("storedid", b64str)
+            self.page.show_dialog(ft.SnackBar(f"Regenerate id {id}"))
 
     def __build_card(self):
         self.defrow = ft.Row(
@@ -796,16 +740,21 @@ class rsup(ft.Container):
 
     def did_mount(self):
         self.running = True
-        self.page.run_task(self.verdict_shows)
+        self.page.run_task(self.verdict_upstash)
 
     def will_unmount(self):
         self.running = False
 
-    async def verdict_shows(self):
-        jsondata = await ft.SharedPreferences().get("upstash")
-        if jsondata:
-            self.tokenbt.content = f"Token Activation"
+    async def verdict_upstash(self):
+        """改变token按钮显示内容"""
+        try:
+            jsondata = await ft.SharedPreferences().get("upstash")
+            temp = bc.from_base64(jsondata)
+            if temp:
+                self.tokenbt.content = "Token Activation"
             self.tokenbt.update()
+        except Exception as ex:
+            logr.info(f"verdict_upstash is error, {ex}")
 
     def __build_conter(self):
         bgc = RandColor(mode="neon", hue="green")
@@ -852,13 +801,13 @@ class rsup(ft.Container):
         if jsondata:
             token.setting_valid_info(jsondata=jsondata)
 
-    async def handle_callback(self, jsondata: str):
+    async def handle_callback(self, jsondata: dict):
+        """设置加密 upstash 数据"""
         if jsondata:
-            # logr.info(f"callback: {jsondata}")
-            if isinstance(jsondata, dict):
-                jsondata = json.dumps(jsondata)
-            await ft.SharedPreferences().set("upstash", json.dumps(jsondata))
-            self.page.run_task(self.verdict_shows)
+            b64str = bc.to_base64(jsondata)
+            if b64str:
+                await ft.SharedPreferences().set("upstash", b64str)
+            self.page.run_task(self.verdict_upstash)
 
 
 # endregion

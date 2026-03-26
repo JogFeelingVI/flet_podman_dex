@@ -2,20 +2,24 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-10 07:42:36
+# @Last Modified time: 2026-03-24 06:37:13
 
 
-from .Savedialogbox import savedialog, tadbx
-from .jackpot_core import randomData, filter_for_pabc
-from .DraculaTheme import DraculaColors, RandColor, HarmonyColors
-from .loger import logr
-import flet as ft
-import os
 import asyncio
-import time
-import re
+import os
 import random
+import re
+import time
+
+import flet as ft
 import requests
+
+from .byterfiles import BinaryConverter as bc
+from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
+from .jackpot_core import calculate_lottery_rdffp, initialization
+from .loger import logr
+from .Savedialogbox import joblibdlg, operates, savedialog, tadbx
+from .svgbase64 import svgimage, check_select
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
@@ -24,24 +28,28 @@ jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
 
 # region itemC2plus
 class itemC2plus(ft.Container):
-    def __init__(self):
+    def __init__(self, Calculation_Results: str = None):
         super().__init__()
         self.timeout = 60
-        self.is_refreshing = False
         self.running = False
         self.Itemc2_remove = None
         self.fontSize = 25
         self.selected = False
         self.calc_task_running = False  # 控制后台计算任务是否在运行
         self.state_exp = "init"  # 状态: init, calculating, done, timeout, error
+        # print(f'{self.state_exp=}')
         self.elapsed_time = 0.0  # 记录已消耗时间
         self.tempd = None  # 记录计算结果
+        # print(f'{self.tempd=}')
         self.start_time = 0.0
+        self.rdffp = None
         # 参数
         self.userColor = RandColor(mode="neon")
         self.bgc = HarmonyColors(
             base_hex_color=self.userColor, harmony_type="split", mode="neon"
         )
+        self.adjust_position = None
+        self.CALCR = ""
         self.padding = 8
         self.border_radius = 10
         self.gradient = ft.LinearGradient(
@@ -50,12 +58,27 @@ class itemC2plus(ft.Container):
         self.content = self.__build_content()
         self.animate = ft.Animation(300, ft.AnimationCurve.EASE)
 
+        if Calculation_Results:
+            self.state_exp = "done"
+            self.tempd = Calculation_Results
+            self.CALCR = "SELECT"
+
     # region generate_data_background
+
+    def load_rdffp(self, Forced: bool = False):
+        if not self.rdffp or Forced:
+            logr.info(f"initialization rdffp. Forced is {Forced}.")
+            settings = self.page.session.store.get("settings")
+            filters = self.page.session.store.get("filters")
+            settings = bc.from_base64(settings)
+            filters = bc.from_base64(filters)
+            self.rdffp = initialization(settings, filters)
+
     async def generate_data_background(self, name: str):
         if self.calc_task_running:
             return  # 如果已经在后台计算了，就不重复启动
 
-        logr.info(f"Start Data Generation {name}")
+        # logr.info(f"Start Data Generation {name}")
         self.calc_task_running = True
         self.state_exp = "calculating"
         self.start_time = time.time()
@@ -63,7 +86,10 @@ class itemC2plus(ft.Container):
         try:
             while self.state_exp == "calculating":
                 # 后台计算数据
-                tempd, state = await asyncio.to_thread(self.calculate_lottery)
+
+                tempd, state = await asyncio.to_thread(
+                    calculate_lottery_rdffp, *self.rdffp
+                )
                 current_time = time.time()
                 self.elapsed_time = current_time - self.start_time
 
@@ -104,7 +130,7 @@ class itemC2plus(ft.Container):
     # ==========================================
     def sync_ui_to_state(self):
         # 安全检查：防止在 unmount 的瞬间调用更新
-        if self.running == False:
+        if not self.running:
             return
 
         self.buildBadge.content.value = f"{self.elapsed_time:.2f}"
@@ -120,7 +146,7 @@ class itemC2plus(ft.Container):
             self.showNumber.controls = self.displayshow("Please wait...").controls
 
         elif self.state_exp == "done":
-            self.showNumber.controls = self.displayNumbers(self.tempd).controls
+            self.showNumber.controls = self.displayNumbersv2(self.tempd).controls
 
         elif self.state_exp == "timeout":
             self.showNumber.controls = self.displayshow(
@@ -129,12 +155,16 @@ class itemC2plus(ft.Container):
 
         elif self.state_exp == "error":
             self.showNumber.controls = self.displayshow(
-                f"TProgram execution error."
+                "TProgram execution error."
             ).controls
 
         self._last_state_exp = self.state_exp
 
-        self.showNumber.update()
+        if self.CALCR == "SELECT":
+            e_temp = ft.Event(name="click", control=self.check, data="sync_ui_to_state")
+            self.handle_Selected(e_temp)
+
+        self.update()
 
     # endregion
 
@@ -154,35 +184,25 @@ class itemC2plus(ft.Container):
         )
         return row
 
-    def displayNumbers(self, text: str, size: int = 35):
-        """用环形标示 标识出数字"""
+    def displayNumbersv2(self, text: str, size: int = 35):
         result = re.findall(r"\d+|\+", text)
         row = ft.Row(
             wrap=False,
             scroll=ft.ScrollMode.HIDDEN,
             expand=True,
-            spacing=5,
+            spacing=2,
         )
-        colors = [["#d9dbdf", "#747fdf"], ["#eab425", "#fbbf24"]]
-        quan, shuzi = colors[0]
+        colors = ["#aab1ee", "#eab425"]
+        uc = colors[0]
         for key in result:
             if key == "+":
-                quan, shuzi = colors[1]
+                uc = colors[1]
                 continue
-            item = ft.Container(
-                content=ft.Text(
-                    value=f"{key}",
-                    size=size * 0.5,  # 字体大小约为容器的一半
-                    weight=ft.FontWeight.BOLD,
-                    color=shuzi,  # 文字建议也用金色系或对比色
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                bgcolor=ft.Colors.TRANSPARENT,  # 背景透明
-                border=ft.Border.all(1, quan),
+            item = ft.Image(
+                src=svgimage(key),
                 width=size,
                 height=size,
-                border_radius=size / 2,
-                alignment=ft.Alignment.CENTER,
+                color=uc,
             )
             row.controls.append(item)
         return row
@@ -197,12 +217,19 @@ class itemC2plus(ft.Container):
         #     # self.refresh(name="did_mount")
         #     self.page.run_task(self.SearchForData, name="did_mount")
         self.running = True
+
         # 1. 启动后台计算任务（如果还没启动，且当前还没计算完成）
-        if not self.calc_task_running and self.state_exp not in [
-            "done",
-            "timeout",
-            "error",
-        ]:
+        if (
+            not self.calc_task_running
+            and self.state_exp
+            not in [
+                "done",
+                "timeout",
+                "error",
+            ]
+            and not self.tempd
+        ):
+            self.load_rdffp()
             self.state_exp = "calculating"
             self.page.run_task(self.generate_data_background, name="background_task")
 
@@ -230,45 +257,45 @@ class itemC2plus(ft.Container):
         )
         return self.buildBadge
 
-    def __build_check(self, size: int = 30):
-        def toggle_icon(e):
-            # 切换选中状态
-            if self.state_exp != "done":
-                return
-            # e.control.selected = not e.control.selected
-            # e.control.update()
-            self.selected = not self.selected
-            self.check.bgcolor = (
-                ft.Colors.with_opacity(0.6, RandColor(mode="neon", hue="Green"))
-                if self.selected
-                else None
+    def handle_Selected(self, e):
+        if self.state_exp != "done":
+            return
+        self.selected = not self.selected
+        imgcolor = "#d1d1d1" if not self.selected else "#3CFA40"
+        self.check.content = ft.Image(
+            src=check_select(color=imgcolor), height=30, width=30
+        )
+        rows: ft.Column = self.content
+        rows.controls[1].visible = not self.selected
+        if self.selected:
+            self.border = ft.Border(
+                left=ft.BorderSide(5, ft.Colors.with_opacity(1, self.userColor)),
             )
-            rows: ft.Column = self.content
-            rows.controls[1].visible = not self.selected
-            if self.selected:
-                self.border = ft.Border(
-                    left=ft.BorderSide(5, ft.Colors.with_opacity(1, self.userColor)),
-                )
-            else:
-                # self.border_radius = 10
-                self.border = None
+        else:
+            self.border = None
+        if self.adjust_position and self.selected:
+            self.adjust_position(self)
+        self.update()
 
-            if self.adjust_position and self.selected:
-                self.adjust_position(self)
-                logr.info("adjust_position is self.")
-            self.update()
-            # end
-
+    def __build_check(self, size: int = 30):
+        # self.check = ft.Container(
+        #     padding=5,
+        #     content=ft.Icon(
+        #         ft.Icons.CHECK, color=DraculaColors.FOREGROUND, size=size * 0.6
+        #     ),
+        #     width=size,
+        #     height=size,
+        #     border_radius=size / 2,
+        #     alignment=ft.Alignment.CENTER,
+        #     on_click=self.handle_Selected,
+        # )
         self.check = ft.Container(
-            padding=5,
-            content=ft.Icon(
-                ft.Icons.CHECK, color=DraculaColors.FOREGROUND, size=size * 0.6
+            padding=0,
+            bgcolor=ft.Colors.TRANSPARENT,
+            content=ft.Image(
+                src=check_select(color="#9E9E9E"), height=size, width=size
             ),
-            width=size,
-            height=size,
-            border_radius=size / 2,
-            alignment=ft.Alignment.CENTER,
-            on_click=toggle_icon,
+            on_click=self.handle_Selected,
         )
         return self.check
 
@@ -276,16 +303,12 @@ class itemC2plus(ft.Container):
         butter = ft.Container(
             # padding=5,
             content=ft.Icon(icon, color=self.userColor, size=size),
-            # width=size,
-            # height=size,
-            # border_radius=size / 2,
-            # alignment=ft.Alignment.CENTER,
             on_click=onclick,
         )
         return butter
 
     def __build_content(self):
-        content = ft.Column(
+        conter = ft.Column(
             spacing=0,
             controls=[
                 ft.Row(
@@ -314,7 +337,7 @@ class itemC2plus(ft.Container):
             ],
         )
         self.showNumber = shownumber
-        return content
+        return conter
 
     def setting_Itemc2_Remove(self, itemc2remove=None):
         self.Itemc2_remove = itemc2remove
@@ -324,6 +347,7 @@ class itemC2plus(ft.Container):
             return
         # logr.info(f"markdata is running. {name}")
         self.state_exp = "calculating"
+        self.load_rdffp(Forced=True)
         self.page.run_task(self.generate_data_background, name=name)
         self.sync_ui_to_state()
 
@@ -331,33 +355,18 @@ class itemC2plus(ft.Container):
         if self.state_exp == "calculating":
             self.page.run_task(self.ui_update_loop)
 
-    def calculate_lottery(self):
-        settings = self.page.session.store.get("settings")
-        filters = self.page.session.store.get("filters")
-        if settings:
-            rd = randomData(seting=settings["randomData"])
-        else:
-            return ("No settings", False)
-        result = rd.get_pabc()
-        if not filters:
-            return (rd.get_exp(result), True)
-        filter_jp = filter_for_pabc(filters=filters)
-        if filter_jp.handle(result) == False:
-            return (rd.get_exp(result), False)
-        return (rd.get_exp(result), True)
-
     def handle_refresh_data(self, e):
         """右滑逻辑：刷新数据"""
         # logr.info("向右滑动：正在刷新数据...")
         self.refresh(name="refresh_data")
-        self.page.show_dialog(ft.SnackBar(f"handle refresh data."))
+        self.page.show_dialog(ft.SnackBar("handle refresh data."))
 
     def handle_delete(self, e):
-        if self.is_refreshing or self.selected:
+        if self.calc_task_running or self.selected:
             return
         if self.Itemc2_remove:
             self.Itemc2_remove(self)
-        self.page.show_dialog(ft.SnackBar(f"handle delete."))
+        self.page.show_dialog(ft.SnackBar("handle delete."))
 
 
 # endregion
@@ -368,7 +377,7 @@ class itemsList(ft.Container):
     def __init__(self):
         super().__init__()
         self.content = self.__build_card()
-        self.max_item = 10
+        self.max_item = 20
         self.padding = 10
         self.width = float("inf")
         self.bgcolor = ft.Colors.TRANSPARENT
@@ -385,75 +394,99 @@ class itemsList(ft.Container):
             ft.PagePlatform.ANDROID,
             ft.PagePlatform.IOS,
         ]
-        self.max_item = 10 if is_mobile_or_web else 1000
+        self.max_item = 20 if is_mobile_or_web else 1000
 
     def adjust_position(self, item: itemC2plus):
         if not item:
             return
-        control: ft.Column = self.content
-        control.controls.remove(item)
-        control.controls.insert(0, item)
-        control.update()
-        logr.info("adjust_position is Done.")
+        self.mainitems.controls.remove(item)
+        self.mainitems.controls.insert(0, item)
+        self.mainitems.update()
 
-    def add_itemc2(self, itemc2remove=None):
-        control = self.content
-        if not isinstance(control, ft.Column):
-            logr.info(f"add_item type {type(control)}")
-            return
+    def add_itemc2(self, itemc2remove=None, Calculation_Results: str = None):
         itemc2_len = [
             x
-            for x in control.controls
-            if isinstance(x, itemC2plus) and x.selected == False
+            for x in self.mainitems.controls
+            if isinstance(x, itemC2plus) and not x.selected
         ].__len__()
-        if itemc2_len < self.max_item:
-            temp = itemC2plus()
+        selectlen = self.mainitems.controls.__len__() - itemc2_len
+        if itemc2_len < self.max_item and selectlen < self.max_item * 10:
+            temp = itemC2plus(Calculation_Results)
             temp.setting_adjust_position(self.adjust_position)
             temp.setting_Itemc2_Remove(itemc2remove)
-            control.controls.append(temp)
+            self.mainitems.controls.append(temp)
             self.update()
 
     async def all_refresh(self):
         """全部刷新"""
-        control = self.content
-        if not isinstance(control, ft.Column):
-            logr.info(f"all_refresh {type(control)}")
-            return
-        itemc2_all = [x for x in control.controls if isinstance(x, itemC2plus)]
+        itemc2_all = [x for x in self.mainitems.controls if isinstance(x, itemC2plus)]
         for item in itemc2_all:
-            if item.selected == False:
+            if not item.selected:
                 item.refresh(name="all_refresh")
-                await asyncio.sleep(0.2)
+                await asyncio.sleep(0.1)
 
-    def get_item_exp(self):
-        """"""
-        control = self.content
-        if not isinstance(control, ft.Column):
-            logr.info(f"all_refresh {type(control)}")
-            return
-        exp_all = [
-            x.tempd
-            for x in control.controls
-            if isinstance(x, itemC2plus) and x.selected
-        ]
+    def get_item_exp(self, max_count: int = 10, data: str = "select"):
+        """
+        data:
+            all
+            select [default]
+            unselected
+        """
+        exp_all = []
+        reserve = []
+        select_flg = []
+        match data:
+            case "all":
+                select_flg = [True, False]
+            case "select":
+                select_flg = [True]
+            case "unselected":
+                select_flg = [False]
+            case _:
+                select_flg = [True]
+
+        # self.state_exp = "calculating"
+
+        for x in self.mainitems.controls:
+            # 如果是目标类型 且 已选中 且 提取篮子还没满
+            if (
+                isinstance(x, itemC2plus)
+                and x.selected in select_flg
+                and len(exp_all) < max_count
+                and x.state_exp != "calculating"
+            ):
+                exp_all.append(x.tempd)
+                # 注意：这里不把 x 放入 reserve，意味着它会被从 UI 中删除
+            else:
+                # 1. 不是目标类型
+                # 2. 或者没被选中
+                # 3. 或者已经选满了10个
+                # 这些情况统统保留在 UI 中
+                reserve.append(x)
+
+        self.mainitems.controls = reserve
+        self.mainitems.update()
+
         return exp_all
 
     def remove_item(self, item: itemC2plus):
-        control = self.content
-        if not isinstance(control, ft.Column):
-            return
         if item:
-            control.controls.remove(item)
-            self.update()
+            self.mainitems.controls.remove(item)
+            self.mainitems.update()
 
     def __build_card(self):
         """Add, Apply, Cancel"""
-        return ft.Column(
+        self.mainitems = ft.Column(
             # wrap=True,
             controls=[],
             # 给这一行打个标签，方便以后提取数据
             alignment=ft.MainAxisAlignment.START,
         )
+        conter = ft.Container(
+            padding=0,
+            content=self.mainitems,
+        )
+        return conter
 
 
 # endregion
@@ -497,7 +530,9 @@ class commandList(ft.Container):
     def setting_all_refresh(self, all_refresh=None):
         self.all_refresh = all_refresh
 
-    def __build_butter(self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None):
+    def __build_butter(
+        self, size=70, icon=ft.Icons.ABC, name="ABC", oncilck=None, onlong=None
+    ):
         def handle_hover(e):
             if e.data:
                 conter.bgcolor = ft.Colors.with_opacity(0.2, DraculaColors.PURPLE)
@@ -514,8 +549,11 @@ class commandList(ft.Container):
         def handle_onclick(e):
             if oncilck:
                 oncilck(e)
-            # Event(name='hover', data=True)
             handle_hover(ft.Event(name="hover", control=conter, data=False))
+
+        def handle_long_press(e):
+            if onlong:
+                self.page.run_task(onlong, e)
 
         # end
         uColor = RandColor(mode="Morandi")
@@ -525,7 +563,6 @@ class commandList(ft.Container):
             alignment=ft.Alignment.CENTER,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.2, uColor)),
             border_radius=8,
-            animate=ft.Animation(300, ft.AnimationCurve.EASE),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
@@ -541,6 +578,7 @@ class commandList(ft.Container):
             ),
             on_hover=handle_hover,
             on_click=handle_onclick,
+            on_long_press=handle_long_press,
         )
         return conter
 
@@ -549,13 +587,19 @@ class commandList(ft.Container):
         return ft.Row(
             controls=[
                 self.__build_butter(
-                    icon=ft.Icons.INSERT_EMOTICON, name="ADD", oncilck=self.handle_add
+                    icon=ft.Icons.INSERT_EMOTICON,
+                    name="ADD",
+                    oncilck=self.handle_add,
+                    onlong=self.handle_long_paress,
                 ),
                 self.__build_butter(
                     icon=ft.Icons.SCIENCE, name="TEST", oncilck=self.handle_test
                 ),
                 self.__build_butter(
-                    icon=ft.Icons.REFRESH, name="REFRESH", oncilck=self.handle_refresh
+                    icon=ft.Icons.REFRESH,
+                    name="REFRESH",
+                    oncilck=self.handle_refresh,
+                    onlong=self.handle_refresh_long_press,
                 ),
                 self.__build_butter(
                     icon=ft.Icons.SAVE_AS, name="Export", oncilck=self.handle_export
@@ -576,16 +620,39 @@ class commandList(ft.Container):
         #     self.page.run_task(self.shot_capture)
         sdb = savedialog()
         sdb.seting_get_all_exp(self.get_exp_all)
+        sdb.setting_cancel(self.export_callback)
         self.page.show_dialog(sdb.adb)
+
+    def export_callback(self, exp: list = None):
+        if not exp:
+            return
+        if self.item_list_add and self.itemc2remove:
+            for _e in exp:
+                self.item_list_add(self.itemc2remove, _e)
 
     def handle_add(self, e):
         """执行add"""
         if self.item_list_add and self.itemc2remove:
             self.item_list_add(self.itemc2remove)
 
+    async def handle_long_paress(self, e):
+        jobadb = joblibdlg()
+        jobadb.setting_add_remove(self.item_list_add, self.itemc2remove)
+        self.page.show_dialog(jobadb.adb)
+
     def handle_refresh(self, e):
         if self.all_refresh:
             self.page.run_task(self.all_refresh)
+
+    async def handle_refresh_long_press(self, e):
+        ops = operates()
+        ops.setting_callback(self.refresh_callback)
+        self.page.show_dialog(ops.adb)
+
+    async def refresh_callback(self, **kwargs):
+        logr.info(f"callback data: {kwargs}")
+        if self.get_exp_all:
+            self.get_exp_all(**kwargs)
 
 
 # endregion

@@ -2,17 +2,18 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-08 22:34:35
+# @Last Modified time: 2026-03-21 23:28:50
 
-from Customs.DraculaTheme import DraculaColors, RandColor
-from Customs.setings import SetingsPage
-from Customs.filter import FilterPage
-from Customs.lottery import LotteryPage
-from Customs.jackpot_core import randomData
-from Customs.loger import logr
-from Customs.loadfonts import FontManager
-import flet as ft
 import os
+
+import flet as ft
+from Customs.DraculaTheme import DraculaColors, RandColor
+from Customs.filter import FilterPage
+from Customs.jackpot_core import randomData
+from Customs.loadfonts import FontManager
+from Customs.loger import logr
+from Customs.lottery import LotteryPage
+from Customs.setings import SetingsPage
 
 # 获取系统标示
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
@@ -35,7 +36,7 @@ async def main(page: ft.Page):
     # fsp_fonts = fsp.get_fastest_json()
     fsp_fonts = FontManager()
     page.fonts = fsp_fonts.get_fonts()
-    logr.info(f"Registered fonts: {page.fonts.keys()}")
+    logr.info(f"Registered fonts: {page.fonts}")
 
     # --- 4. 预定义底部图标引用 (方便后续动态修改 Badge) ---
     lottery_icon = ft.Icon(
@@ -45,7 +46,7 @@ async def main(page: ft.Page):
         # badge=str(initial_count) if initial_count > 0 else None,
     )
 
-    logr.info(f"Initialization complete.")
+    logr.info("Initialization complete.")
 
     view_map = {
         0: SetingsPage(),
@@ -104,5 +105,7 @@ async def main(page: ft.Page):
     # page.update()
 
 
-# 运行应用
-ft.run(main, upload_dir=app_temp_path, assets_dir=app_assets_dir)
+if __name__ == "__main__":
+    # multiprocessing.freeze_support()
+    # 运行应用
+    ft.run(main, upload_dir=app_temp_path, assets_dir=app_assets_dir)

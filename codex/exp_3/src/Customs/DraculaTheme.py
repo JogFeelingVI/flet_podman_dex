@@ -2,11 +2,11 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 04:20:46
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-10 01:56:11
+# @Last Modified time: 2026-03-21 23:43:40
 
-from typing import Final
-import random
 import colorsys
+import random
+from typing import Final
 
 _last_h = random.random()
 
@@ -77,23 +77,23 @@ def RandColor(mode="def", is_dark_theme=True, hue=None):
     # 3. 根据模式确定饱和度(S)和亮度(L)
     match mode.lower():
         case "morandi":
-            s = random.uniform(0.25, 0.45)  # 稍微提高一点点饱和度下限
-            l = random.uniform(0.65, 0.8) + hue_step
+            Saturation = random.uniform(0.25, 0.45)  # 稍微提高一点点饱和度下限
+            brightness = random.uniform(0.65, 0.8) + hue_step
         case "neon":
-            s = random.uniform(0.8, 1.0)
-            l = random.uniform(0.6, 0.75) + hue_step
+            Saturation = random.uniform(0.8, 1.0)
+            brightness = random.uniform(0.6, 0.75) + hue_step
         case "glass":
-            s = random.uniform(0.4, 0.6)
-            l = random.uniform(0.7, 0.85) + hue_step
+            Saturation = random.uniform(0.4, 0.6)
+            brightness = random.uniform(0.7, 0.85) + hue_step
         case _:
-            s = random.uniform(0.5, 0.9)
-            l = random.uniform(0.6, 0.8) + hue_step
+            Saturation = random.uniform(0.5, 0.9)
+            brightness = random.uniform(0.6, 0.8) + hue_step
 
     # 4. 最终约束：确保亮度不会超过 0.95 导致变白，也不会低于 0.6/0.2 导致看不清
-    l = max(0.65 if is_dark_theme else 0.2, min(l, 0.95))
+    brightness = max(0.65 if is_dark_theme else 0.2, min(brightness, 0.95))
 
     # 5. HLS 转换为 RGB
-    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    r, g, b = colorsys.hls_to_rgb(h, brightness, Saturation)
     hex_color = "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
     return hex_color
 
@@ -109,7 +109,7 @@ def get_hue_from_hex(hex_color: str) -> float:
     b = int(hex_color[4:6], 16) / 255.0
 
     # rgb_to_hls 返回 (hue, lightness, saturation)
-    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    h, *_ = colorsys.rgb_to_hls(r, g, b)
     return h
 
 

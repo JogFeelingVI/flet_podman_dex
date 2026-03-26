@@ -2,12 +2,14 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-04 01:10:14
+# @Last Modified time: 2026-03-22 09:23:29
 
-from .DraculaTheme import DraculaColors, RandColor
-import re
 import random
+import re
+
 import flet as ft
+
+from .DraculaTheme import RandColor
 
 __version__ = "0.1.0"
 
@@ -18,7 +20,6 @@ class paditem(ft.Container):
         super().__init__()
         self.userColor = RandColor(mode="Morandi")
         self.padding = ft.Padding(10, 5, 10, 5)
-        # self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.userColor))
         self.border_radius = 5
         self.bgcolor = ft.Colors.with_opacity(0.1, self.userColor)
         self.content = self.__build_content_row()
@@ -77,13 +78,20 @@ class paditem(ft.Container):
         )
 
     def __build_editable_unit(self, init_val: str):
-        kids_width = 45
+        kids_width = 18
+
+        def onsizechange(e):
+            nonlocal kids_width
+            edit.width = e.width * 1.25
+            # print(f"onsizechange {e=}")
+
         show = ft.Text(
             init_val,
             size=15,
             color=self.userColor,
             weight="bold",
             text_align="center",
+            on_size_change=onsizechange,
         )
         edit = ft.TextField(
             value=init_val,
@@ -97,15 +105,19 @@ class paditem(ft.Container):
             border=ft.InputBorder.NONE,
             text_align="center",
             on_blur=lambda _: self.handle_blur(show, edit, black),
-            on_change=lambda _: self.handle_change(show, edit),
+            on_change=lambda e: self.handle_change(show, edit, e),
         )
         black = ft.Container(
             height=25,
             padding=ft.Padding(5, 1, 5, 1),
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, self.userColor)),
+            # border=ft.Border.all(1, ft.Colors.with_opacity(0.2, self.userColor)),
+            border=ft.Border.only(
+                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.5, self.userColor))
+            ),
             border_radius=3,
             bgcolor=ft.Colors.with_opacity(0.1, self.userColor),
             content=ft.Stack(alignment=ft.Alignment.CENTER, controls=[show, edit]),
+            # content=edit,
             on_click=lambda _: self.handle_click(show, edit, black),
         )
         return black, show, edit
@@ -135,11 +147,13 @@ class paditem(ft.Container):
         show.visible = True
         edit.visible = False
         black.update()
-        cmd = self.command()
+        self.command()
         # # print(f"Command after edit: {cmd}")
 
-    def handle_change(self, show: ft.Text, edit: ft.TextField):
+    def handle_change(self, show: ft.Text, edit: ft.TextField, e):
         show.value = edit.value
+        edit.width = len(e.data) * 10.84 + 14.4
+        # print(f'handle_change {e=} {edit.width=}')
 
 
 # endreion
