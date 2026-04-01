@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-21 23:28:50
+# @Last Modified time: 2026-03-30 05:49:32
 
 import os
 
@@ -103,6 +103,8 @@ async def main(page: ft.Page):
     # 将内容添加到页面
     page.add(content_area)
     # page.update()
+    # mcp_server = mcpserver(page.platform)
+    # mcp_server.run_mcp_server()
 
 
 if __name__ == "__main__":

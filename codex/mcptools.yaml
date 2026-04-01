@@ -1,0 +1,33 @@
+# @Author: JogFeelingVI
+# @Date:   2026-04-01 01:58:36
+# @Last Modified by:   JogFeelingVI
+# @Last Modified time: 2026-04-01 01:58:41
+# Save the output of this file and use kubectl create -f to import
+# it into Kubernetes.
+#
+# Created with podman-5.8.1
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2026-04-01T01:56:55Z"
+  labels:
+    app: compassionategould-pod
+  name: compassionategould-pod
+spec:
+  containers:
+  - env:
+    - name: HOST
+      value: 0.0.0.0
+    - name: MCP_AUTO_OPEN_ENABLED
+      value: "false"
+    - name: TERM
+      value: xterm
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    name: compassionategould
+    ports:
+    - containerPort: 6274
+      hostPort: 6274
+    - containerPort: 6277
+      hostPort: 6277
+    stdin: true
+    tty: true

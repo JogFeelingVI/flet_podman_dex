@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="70.842949mm"
+   height="70mm"
+   viewBox="0 0 70.842949 70"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   sodipodi:docname="upstash.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.4022026"
+     inkscape:cx="189.34496"
+     inkscape:cy="194.33711"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1" />
+  <path
+     id="path1"
+     style="display:inline;fill:#084860;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-dasharray:none"
+     d="M 61.50867,42.962907 A 33.489635,33.489635 0 0 0 28.019241,76.452336 33.489635,33.489635 0 0 0 61.50867,109.94229 33.489635,33.489635 0 0 0 94.998615,76.452336 33.489635,33.489635 0 0 0 61.50867,42.962907 Z m 0,7.627958 A 25.861578,25.861578 0 0 1 87.370657,76.452336 25.861578,25.861578 0 0 1 61.50867,102.3138 25.861578,25.861578 0 0 1 35.647199,76.452336 25.861578,25.861578 0 0 1 61.50867,50.590865 Z"
+     transform="translate(-26.591699,-41.134689)" />
+  <rect
+     style="fill:#f20a54;fill-opacity:1;stroke:#ffffff;stroke-width:1.13757"
+     id="rect1"
+     width="69.708443"
+     height="31.05484"
+     x="0.56571972"
+     y="20.324028"
+     inkscape:label="bg" />
+  <text
+     xml:space="preserve"
+     style="font-size:29.0424px;font-family:'Source Code Pro';-inkscape-font-specification:'Source Code Pro, Normal';writing-mode:lr-tb;direction:ltr;fill:#ffffff;fill-opacity:1;stroke:#ffffff;stroke-width:2.68248;stroke-dasharray:none;stroke-dashoffset:0"
+     x="6.0266056"
+     y="48.28878"
+     id="text1"
+     inkscape:label="MCP"
+     transform="scale(1.0837381,0.92273214)"><tspan
+       sodipodi:role="line"
+       id="tspan1"
+       style="fill:#ffffff;fill-opacity:1;stroke-width:2.68248;stroke-dasharray:none;stroke-dashoffset:0"
+       x="6.0266056"
+       y="48.28878">MCP</tspan></text>
+</svg>

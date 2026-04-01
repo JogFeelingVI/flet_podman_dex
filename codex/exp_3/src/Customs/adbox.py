@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-07 11:39:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-12 05:00:48
+# @Last Modified time: 2026-03-28 01:07:35
 
 
 import flet as ft
@@ -14,10 +14,6 @@ class adbx(ft.AlertDialog):
     def __init__(self, uc: str, content: ft.Control, Child_padding: int = 12):
         self.userColor = uc if uc else RandColor(mode="neon")
         self.child_padding = Child_padding
-        self.shape = ft.RoundedRectangleBorder(
-            radius=10,
-            side=ft.BorderSide(1, self.userColor),  # 宽度为2，颜色为蓝色
-        )
         self._ucontent = content
         self.running = False
         self.did_mount_callback = None
@@ -58,6 +54,10 @@ class adbx(ft.AlertDialog):
                 blur_radius=8,  # 模糊程度（数值越大光越柔和）
                 color=ft.Colors.with_opacity(0.2, shadow_color[1]),  # 阴影颜色
                 offset=ft.Offset(0, 0),  # 阴影偏移
+            ),
+            shape=ft.RoundedRectangleBorder(
+                side=ft.BorderSide(2, self.userColor),  # 宽度为2，颜色为蓝色
+                radius=10,
             ),
         )
         conter.content = self._ucontent if self._ucontent else None

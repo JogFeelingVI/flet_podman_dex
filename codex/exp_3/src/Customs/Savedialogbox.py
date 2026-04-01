@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-02 09:10:57
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-25 23:28:46
+# @Last Modified time: 2026-03-27 02:38:47
 
 
 import asyncio
@@ -316,13 +316,15 @@ class tadbx:
             # print(f"{_fitem}")
             try:
                 _f2func = filter_for_pabc(filters=[_fitem])
-            
+
                 pass_rate = (
                     sum([1 for r in results if _f2func.handle(r)]) / len(results) * 100
                 )
             except:
                 print(f"{_fitem} Syntax error.")
-                await self.detectstatus.addinfo(f"# {_fitem['condition']} Syntax error.")
+                await self.detectstatus.addinfo(
+                    f"# {_fitem['condition']} Syntax error."
+                )
                 self.detectstatus.task = "error"
                 return
             prinfo = [
@@ -337,14 +339,21 @@ class tadbx:
                 f"{_fitem['func']} {_fitem['target']} {_fitem['condition']}"
             )
             if pass_rate < 1.0:
-                await self.detectstatus.addinfo(f"# {_fitem['condition']} Logical error.")
+                await self.detectstatus.addinfo(
+                    f"# {_fitem['condition']} Logical error."
+                )
                 self.detectstatus.task = "pass_rate_zero"
                 return
 
         self.detectstatus.task = "none"
 
     async def showresult(self):
-        while self.detectstatus.task in ["Detection", "pass_rate_zero", "skip", "error"]:
+        while self.detectstatus.task in [
+            "Detection",
+            "pass_rate_zero",
+            "skip",
+            "error",
+        ]:
             await asyncio.sleep(0.3)
             text = self.detectstatus.getinfo()
             if text:
@@ -356,7 +365,7 @@ class tadbx:
                 f"Testing in progress... {self.pbar.value * 100:.0f}% complete"
             )
             self.adb.content.update()
-            if self.detectstatus.task in ["pass_rate_zero", "skip","error"]:
+            if self.detectstatus.task in ["pass_rate_zero", "skip", "error"]:
                 self.detectstatus.task = "none"
                 return
 
@@ -1021,7 +1030,9 @@ class joblibdlg:
                 try:
                     return int(val)
                 except ValueError:
-                    print(f"警告：输入 '{val}' 不是有效数字，使用默认值 {default}")
+                    print(
+                        f"Warning: Enter' {val} 'Not a valid number, use default value {default}"
+                    )
             return default
 
         timeout_limit = safe_get_int(self.intimeout, 60)
@@ -1048,6 +1059,7 @@ class joblibdlg:
         except Exception as ex:
             print(f"seting erro, use default value. {ex}")
         finally:
+            await asyncio.sleep(1)
             self.is_computing = False
             # print(f"{temp=}")
 
@@ -1310,13 +1322,15 @@ class joblibdlg:
                             if batch_res_list:
                                 for res in batch_res_list:
                                     self.valid_results.append(res)
+                                    # print(f'{len(self.valid_results)}')
                                     if (
                                         Quantity > 0
                                         and len(self.valid_results) >= Quantity
                                     ):
+                                        # print("ren wu wangcheng tiqian tuichu")
                                         break
                         except Exception as e:
-                            print(f"计算出错: {e}")
+                            print(f"run_parallel_async Calculation error: {e}")
                     if Quantity == 0:
                         self.taskbar_value = (time.time() - start_time) / timeout
                     else:
@@ -1328,7 +1342,7 @@ class joblibdlg:
                         t.cancel()
                     # 显式吞掉取消可能引发的异常，确保不报警告
                     await asyncio.gather(*tasks, return_exceptions=True)
-
+        # print("fanhui shuju")
         self.taskbar_value = 1
         self.Launch_Cancelled = "none"
         return self.valid_results[:Quantity] if Quantity > 0 else self.valid_results

@@ -2,4 +2,5 @@
 ## 如果你想在清理未使用 import 的同时，还顺便对 import 进行排序（类似 isort 的功能），可以运行：
 ```bash
 uvx ruff check --select I,F401 --fix
+uvx ruff format ./exp_3/src/
 ```

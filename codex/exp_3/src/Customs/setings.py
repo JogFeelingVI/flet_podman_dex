@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-23 05:26:35
+# @Last Modified time: 2026-03-30 22:07:21
 
 import asyncio
 import os
@@ -10,86 +10,18 @@ import pathlib
 import re
 
 import flet as ft
-
+from .mcp_fast import run_mcp_server
 from .byterfiles import BinaryConverter as bc
 from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
 from .jackpot_core import randomData
 from .loger import logr
 from .Savedialogbox import upstashtoken
-from .svgbase64 import svgimage
+from .svgbase64 import svgimage, upstashicon, mcpicon
+from .lotterMange import Lotter_Data
 
 app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
 app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
 jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
-
-# region Lotter_Data
-Lotter_Data = {
-    "🔴双色球": {
-        "description": "🇨🇳百万富翁缔造者",
-        "SA": [1, 33],
-        "SB": [1, 16],
-        "SA_K": 6,
-        "SB_K": 1,
-    },
-    "⚪快乐8": {
-        "description": "🇨🇳你的快乐就是他的快乐",
-        "PA": [1, 80],
-        "PA_K": 10,
-    },
-    "✨超级大乐透": {
-        "description": "🇨🇳体育大乐透",
-        "PA": [1, 35],
-        "PB": [1, 12],
-        "PA_K": 5,
-        "PB_K": 2,
-    },
-    "🇨🇳排列3/5": {
-        "description": "🇨🇳体育排列3/5",
-        "PA": [0, 9],
-        "PB": [0, 9],
-        "PC": [0, 9],
-        "PD": [0, 9],
-        "PE": [0, 9],
-        "PA_K": 1,
-        "PB_K": 1,
-        "PC_K": 1,
-        "PD_K": 1,
-        "PE_K": 1,
-    },
-    "✨七星彩": {
-        "description": "🇨🇳体育七星彩",
-        "PA": [0, 9],
-        "PB": [0, 9],
-        "PC": [0, 9],
-        "PD": [0, 9],
-        "PE": [0, 9],
-        "PF": [0, 9],
-        "PG": [0, 14],
-        "PA_K": 1,
-        "PB_K": 1,
-        "PC_K": 1,
-        "PD_K": 1,
-        "PE_K": 1,
-        "PF_K": 1,
-        "PG_K": 1,
-    },
-    "🇺🇸Powerball": {
-        "description": "🇺🇸USA Powerball",
-        "PA": [1, 69],
-        "PB": [1, 26],
-        "PA_K": 5,
-        "PB_K": 1,
-    },
-    "🇹🇼威力彩": {
-        "description": "🇺🇸台湾省销售最好的彩票",
-        "PA": [1, 38],
-        "PB": [1, 8],
-        "PA_K": 6,
-        "PB_K": 1,
-    },
-}
-# endregion
-
 
 # region input_user_rule
 class input_user_rule(ft.Container):
@@ -751,36 +683,77 @@ class rsup(ft.Container):
             jsondata = await ft.SharedPreferences().get("upstash")
             temp = bc.from_base64(jsondata)
             if temp:
-                self.tokenbt.content = "Token Activation"
-            self.tokenbt.update()
+                self.tokenbt.value = "Token Activation"
+                bgc = RandColor(hue="green")
+                self.upstash_bg_change.bgcolor = ft.Colors.with_opacity(0.3, bgc)
+                self.upstash_bg_change.border = ft.Border.all(
+                    1, ft.Colors.with_opacity(0.4, bgc)
+                )
+                self.tokenbt.update()
+                self.upstash_bg_change.update()
+
         except Exception as ex:
             logr.info(f"verdict_upstash is error, {ex}")
 
     def __build_conter(self):
-        bgc = RandColor(mode="neon", hue="green")
+        upmcp = RandColor(mode="neon")
+        mcpstart = ft.Container(
+            padding=ft.Padding(10, 5, 10, 5),
+            alignment=ft.Alignment.CENTER,
+            border_radius=8,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.4, upmcp)),
+            bgcolor=ft.Colors.with_opacity(0.3, upmcp),
+            content=ft.Row(
+                tight=True,
+                controls=[
+                    ft.Image(
+                        src=mcpicon(),
+                        height=25,
+                        # width=35 * 3.45,
+                        repeat=ft.ImageRepeat.NO_REPEAT,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
+                    tokenbt := ft.Text(
+                        "MCP Offline", size=16, color=DraculaColors.FOREGROUND
+                    ),
+                ],
+            ),
+            on_click=self.handle_cilck_mcp
+        )
+        upbgc = RandColor(mode="neon", hue="red")
+        upstash = ft.Container(
+            padding=ft.Padding(10, 5, 10, 5),
+            alignment=ft.Alignment.CENTER,
+            border_radius=8,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.4, upbgc)),
+            bgcolor=ft.Colors.with_opacity(0.3, upbgc),
+            content=ft.Row(
+                tight=True,
+                controls=[
+                    ft.Image(
+                        src=upstashicon(),
+                        height=25,
+                        # width=35 * 3.45,
+                        repeat=ft.ImageRepeat.NO_REPEAT,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
+                    tokenbt := ft.Text(
+                        "Enter Your token", size=16, color=DraculaColors.FOREGROUND
+                    ),
+                ],
+            ),
+            on_click=self.handle_cilck,
+        )
         row = ft.Row(
             spacing=5,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
-                ft.Image(
-                    src="upstash-white-bg.svg",
-                    height=35,
-                    width=35 * 3.45,
-                    repeat=ft.ImageRepeat.NO_REPEAT,
-                    fit=ft.BoxFit.CONTAIN,
-                ),
-                tokenbt := ft.Button(
-                    content="Enter your token",
-                    icon=ft.Icons.TOKEN,
-                    icon_color=ft.Colors.BLACK,
-                    color=ft.Colors.BLACK,
-                    bgcolor=bgc,
-                    on_click=self.handle_cilck,
-                ),
+                upstash,mcpstart
             ],
         )
         self.tokenbt = tokenbt
+        self.upstash_bg_change = upstash
         return row
 
     def __gradient(self):
@@ -800,6 +773,9 @@ class rsup(ft.Container):
         jsondata = await ft.SharedPreferences().get("upstash")
         if jsondata:
             token.setting_valid_info(jsondata=jsondata)
+            
+    async def handle_cilck_mcp(self):
+        self.page.run_task(run_mcp_server)
 
     async def handle_callback(self, jsondata: dict):
         """设置加密 upstash 数据"""

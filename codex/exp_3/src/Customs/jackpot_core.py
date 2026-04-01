@@ -576,6 +576,8 @@ class filterFunc:
         if xsdu not in CalcUtils.nwped(notin):
             return True
         return False
+
+
 # endregion
 
 

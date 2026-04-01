@@ -235,7 +235,7 @@ class quickpad(ft.Container):
             raise ValueError("Item must be an instance of flet.Control")
         temp = paditem(text=self.replacement(text))
         self.conten_row.controls.append(temp)
-        self.conten_row.update()
+        # self.conten_row.update()
 
 
 # endregion

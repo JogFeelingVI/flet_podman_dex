@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-24 06:37:13
+# @Last Modified time: 2026-03-30 02:35:16
 
 
 import asyncio
@@ -82,28 +82,26 @@ class itemC2plus(ft.Container):
         self.calc_task_running = True
         self.state_exp = "calculating"
         self.start_time = time.time()
-
-        try:
+        
+        # 定义一个内部逻辑协程
+        async def calculation_loop():
             while self.state_exp == "calculating":
-                # 后台计算数据
-
+                # 这里的 to_thread 是在线程池运行计算
                 tempd, state = await asyncio.to_thread(
                     calculate_lottery_rdffp, *self.rdffp
                 )
-                current_time = time.time()
-                self.elapsed_time = current_time - self.start_time
-
                 if state:
-                    # 计算成功
                     self.tempd = tempd
                     self.state_exp = "done"
-                    break  # 退出计算循环
-                else:
-                    # 超时判断
-                    if self.elapsed_time >= self.timeout:
-                        self.state_exp = "timeout"
-                        break
-                await asyncio.sleep(0.3)  # 给CPU喘息的机会
+                    break
+                self.elapsed_time = time.time() - self.start_time
+                await asyncio.sleep(0.3)
+
+        try:
+            await asyncio.wait_for(calculation_loop(), timeout=self.timeout)
+        except asyncio.TimeoutError:
+            logr.warning("Data generation timed out.")
+            self.state_exp = "timeout"
 
         except Exception as e:
             logr.error(f"Error in background data generation: {str(e)}", exc_info=True)

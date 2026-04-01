@@ -36,6 +36,8 @@ spec:
       hostPort: 2222
     - containerPort: 45678
       hostPort: 45678
+    - containerPort: 8000
+      hostPort: 8000
     stdin: true
     tty: true
     volumeMounts:
