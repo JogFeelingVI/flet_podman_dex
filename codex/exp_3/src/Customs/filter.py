@@ -7,8 +7,6 @@
 import asyncio
 import hashlib
 import os
-import re
-
 import flet as ft
 
 from .adbox import adbx
@@ -636,13 +634,13 @@ class InputPad(ft.Container):
                             "use ",
                             style=def_text_style,
                         ),
-                        tsp_func:=ft.TextSpan(
+                        tsp_func := ft.TextSpan(
                             "*fun*",
                             style=fun_text_style,
                             on_click=self.handle_func_click,
                         ),
                         ft.TextSpan(" to calculate the target ", style=def_text_style),
-                        tsp_pn:=ft.TextSpan(
+                        tsp_pn := ft.TextSpan(
                             "*pn*",
                             style=tar_text_style,
                             on_click=self.handle_pn_click,
@@ -680,7 +678,7 @@ class InputPad(ft.Container):
             self.applycallback(scriptd=self.pad_data)
         e.control.update()
 
-    def Cratefunc(self, key: str, onclick, type:str, iconindex: int = 0):
+    def Cratefunc(self, key: str, onclick, type: str, iconindex: int = 0):
         if not key or not onclick:
             return
         userColor = RandColor()
@@ -706,7 +704,7 @@ class InputPad(ft.Container):
             bgcolor=ft.Colors.with_opacity(0.1, userColor),
             border_radius=5,
             border=ft.Border.all(1, ft.Colors.with_opacity(0.4, userColor)),
-            on_click=lambda _, t=type,k=key: onclick(t,k),
+            on_click=lambda _, t=type, k=key: onclick(t, k),
             content=ft.Row(
                 tight=True,
                 spacing=2,
@@ -717,8 +715,8 @@ class InputPad(ft.Container):
             ),
         )
         return func
-    
-    def function_click(self, type="func",k=None):
+
+    def function_click(self, type="func", k=None):
         self.__FT_show.visible = False
         self.pad_data[type] = f"{k}".strip()
         match type:
@@ -754,7 +752,9 @@ class InputPad(ft.Container):
             # ? target_pn 已经装载执行下面
             target_pn_items = []
             for key in self.target_pn:
-                target_pn_items.append(self.Cratefunc(key, self.function_click, "target", 1))
+                target_pn_items.append(
+                    self.Cratefunc(key, self.function_click, "target", 1)
+                )
             self.__FT_show.controls = target_pn_items
             self.__FT_show.visible = True
         except Exception:

@@ -662,7 +662,7 @@ def initialization(
 
 
 def calculate_lottery_rdffp(
-    rd: randomData, ffp: filter_for_pabc = None
+    rd: randomData, ffp: filter_for_pabc = None, status: str = "calculating"
 ) -> Tuple[str, bool] | str:
     """全新的数据构建器"""
     if not isinstance(rd, randomData):

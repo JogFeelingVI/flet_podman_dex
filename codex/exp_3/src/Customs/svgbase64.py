@@ -63,6 +63,7 @@ def upstashicon(A: str = "#4af212", B: str = "#7cff50"):
     b64_str = base64.b64encode(svg_code.encode("utf-8")).decode("utf-8")
     return b64_str
 
+
 def mcpicon(color: str = "#f20a54"):
     svg_code = f"""
     <svg width="70.842949" height="70" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" version="1.1">

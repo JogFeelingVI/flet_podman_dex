@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-30 02:35:16
+# @Last Modified time: 2026-04-02 11:43:45
 
 
 import asyncio
@@ -36,8 +36,9 @@ class itemC2plus(ft.Container):
         self.fontSize = 25
         self.selected = False
         self.calc_task_running = False  # 控制后台计算任务是否在运行
-        self.state_exp = "init"  # 状态: init, calculating, done, timeout, error
-        # print(f'{self.state_exp=}')
+        self.state_exp = (
+            "init"  # 状态: init, calculating, done, timeout, error, stopped
+        )
         self.elapsed_time = 0.0  # 记录已消耗时间
         self.tempd = None  # 记录计算结果
         # print(f'{self.tempd=}')
@@ -74,6 +75,17 @@ class itemC2plus(ft.Container):
             filters = bc.from_base64(filters)
             self.rdffp = initialization(settings, filters)
 
+    # 定义一个内部逻辑协程
+    async def calculation_loop(self):
+        while self.state_exp == "calculating":
+            tempd, state = await asyncio.to_thread(calculate_lottery_rdffp, *self.rdffp)
+            if state:
+                self.tempd = tempd
+                self.state_exp = "done"
+                break
+            self.elapsed_time = time.time() - self.start_time
+            await asyncio.sleep(0.3)
+
     async def generate_data_background(self, name: str):
         if self.calc_task_running:
             return  # 如果已经在后台计算了，就不重复启动
@@ -82,23 +94,9 @@ class itemC2plus(ft.Container):
         self.calc_task_running = True
         self.state_exp = "calculating"
         self.start_time = time.time()
-        
-        # 定义一个内部逻辑协程
-        async def calculation_loop():
-            while self.state_exp == "calculating":
-                # 这里的 to_thread 是在线程池运行计算
-                tempd, state = await asyncio.to_thread(
-                    calculate_lottery_rdffp, *self.rdffp
-                )
-                if state:
-                    self.tempd = tempd
-                    self.state_exp = "done"
-                    break
-                self.elapsed_time = time.time() - self.start_time
-                await asyncio.sleep(0.3)
 
         try:
-            await asyncio.wait_for(calculation_loop(), timeout=self.timeout)
+            await asyncio.wait_for(self.calculation_loop(), timeout=self.timeout)
         except asyncio.TimeoutError:
             logr.warning("Data generation timed out.")
             self.state_exp = "timeout"
@@ -118,7 +116,7 @@ class itemC2plus(ft.Container):
             self.sync_ui_to_state()
 
             # 如果状态已经结束，刷新最后一次后跳出UI轮询
-            if self.state_exp in ["done", "timeout", "error"]:
+            if self.state_exp in ["done", "timeout", "error", "stopped"]:
                 break
 
             await asyncio.sleep(0.3)  # UI 刷新频率
@@ -142,19 +140,39 @@ class itemC2plus(ft.Container):
 
         if self.state_exp == "calculating":
             self.showNumber.controls = self.displayshow("Please wait...").controls
+            if self.ref_stop.content.icon != ft.Icons.STOP:
+                self.ref_stop.content = ft.Icon(ft.Icons.STOP, color=DraculaColors.RED)
+                self.ref_stop.update()
 
         elif self.state_exp == "done":
             self.showNumber.controls = self.displayNumbersv2(self.tempd).controls
+            if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
+                self.ref_stop.update()
 
         elif self.state_exp == "timeout":
             self.showNumber.controls = self.displayshow(
                 f"Timeout after {self.elapsed_time:.2f}s"
             ).controls
+            if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
+                self.ref_stop.update()
 
         elif self.state_exp == "error":
             self.showNumber.controls = self.displayshow(
                 "TProgram execution error."
             ).controls
+            if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
+                self.ref_stop.update()
+
+        elif self.state_exp == "stopped":
+            self.showNumber.controls = self.displayshow(
+                f"Stopped at {self.elapsed_time:.2f}s"
+            ).controls
+            if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
+                self.ref_stop.update()
 
         self._last_state_exp = self.state_exp
 
@@ -276,17 +294,6 @@ class itemC2plus(ft.Container):
         self.update()
 
     def __build_check(self, size: int = 30):
-        # self.check = ft.Container(
-        #     padding=5,
-        #     content=ft.Icon(
-        #         ft.Icons.CHECK, color=DraculaColors.FOREGROUND, size=size * 0.6
-        #     ),
-        #     width=size,
-        #     height=size,
-        #     border_radius=size / 2,
-        #     alignment=ft.Alignment.CENTER,
-        #     on_click=self.handle_Selected,
-        # )
         self.check = ft.Container(
             padding=0,
             bgcolor=ft.Colors.TRANSPARENT,
@@ -324,7 +331,7 @@ class itemC2plus(ft.Container):
                     controls=[
                         # self.__build_tips(),
                         self.__build__badge(text="0"),
-                        self.__build_Butter(
+                        ref_setop := self.__build_Butter(
                             26, ft.Icons.REFRESH, self.handle_refresh_data
                         ),
                         self.__build_Butter(
@@ -334,6 +341,7 @@ class itemC2plus(ft.Container):
                 ),
             ],
         )
+        self.ref_stop = ref_setop
         self.showNumber = shownumber
         return conter
 
@@ -343,12 +351,11 @@ class itemC2plus(ft.Container):
     def refresh(self, name: str = "None"):
         if self.calc_task_running or self.selected:
             return
-        # logr.info(f"markdata is running. {name}")
         self.state_exp = "calculating"
+        self.ref_stop.content = ft.Icon(ft.Icons.STOP)
         self.load_rdffp(Forced=True)
         self.page.run_task(self.generate_data_background, name=name)
         self.sync_ui_to_state()
-
         # 3. 如果后台还在计算中，启动 UI 刷新轮询
         if self.state_exp == "calculating":
             self.page.run_task(self.ui_update_loop)
@@ -356,8 +363,13 @@ class itemC2plus(ft.Container):
     def handle_refresh_data(self, e):
         """右滑逻辑：刷新数据"""
         # logr.info("向右滑动：正在刷新数据...")
-        self.refresh(name="refresh_data")
-        self.page.show_dialog(ft.SnackBar("handle refresh data."))
+        match self.ref_stop.content.icon:
+            case ft.Icons.REFRESH:
+                self.refresh(name="handle_refresh_data")
+            case ft.Icons.STOP:
+                self.state_exp = "stopped"
+            # 如果当前是停止状态，则点击后直接调用 refresh 方法
+        self.page.show_dialog(ft.SnackBar(f"handle refresh data. {self.state_exp}"))
 
     def handle_delete(self, e):
         if self.calc_task_running or self.selected:
@@ -483,8 +495,18 @@ class itemsList(ft.Container):
         conter = ft.Container(
             padding=0,
             content=self.mainitems,
+            on_long_press=self.handle_card_long_press,
         )
         return conter
+
+    def handle_card_long_press(self, e):
+        ops = operates()
+        ops.setting_callback(self.refresh_callback)
+        self.page.show_dialog(ops.adb)
+
+    async def refresh_callback(self, **kwargs):
+        logr.info(f"callback data: {kwargs}")
+        self.get_item_exp(**kwargs)
 
 
 # endregion

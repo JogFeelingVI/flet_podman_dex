@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-02 09:10:57
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-27 02:38:47
+# @Last Modified time: 2026-04-02 11:37:25
 
 
 import asyncio
@@ -1459,3 +1459,66 @@ class operates:
 
 
 # endregion
+
+# #region itemslist_long_pess
+# class itemslist_long_pess:
+#     def __init__(self, mainitems:ft.Column):
+#         self.mainitems = mainitems
+#         self.conten = self.__builde_conter()
+#         self.adb = adbx(None, self.conten)
+
+
+#     def __builde_conter(self):
+#         len_mainitems = len(self.mainitems.controls) if self.mainitems and self.mainitems.controls else 0
+#         title = ft.Text(
+#             f"How do you want to handle these {len_mainitems} items",
+#             size=18,
+#             weight="bold",
+#             color=DraculaColors.FOREGROUND,
+#         )
+#         maxmin = ft.Row(
+#             spacing=10,
+#             controls=[
+#                 ft.Text("Max: 1000", size=13, color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND)),
+#                 ft.Text("Min: 0", size=13, color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND)),
+#             ],
+#         )
+#         schedule = ft.Text(
+#             "The latest 10 detected items will be displayed here.",
+#             size=13,
+#             color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND),
+#         )
+#         acts = ft.Row(
+#             alignment=ft.MainAxisAlignment.END,
+#             controls=[
+#                 ft.TextButton(
+#                     "Close",
+#                     on_click=self.handle_close,
+#                     style=ft.ButtonStyle(
+#                         color=ft.Colors.with_opacity(0.8, DraculaColors.FOREGROUND)
+#                     ),
+#                 ),
+#             ],
+#         )
+#         self.more_display = ft.Column(tight=True, spacing=5)
+#         self.info_display = ft.Column(tight=True, spacing=5)
+#         onter = ft.Container(
+#             padding=5,
+#             border_radius=0,
+#             content=ft.Column(
+#                 tight=True,
+#                 spacing=5,
+#                 alignment=ft.MainAxisAlignment.START,
+#                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+#                 controls=[
+#                     title,
+#                     ft.Divider(height=1, color=DraculaColors.FOREGROUND),
+#                     clear_all,
+#                     clear_select,
+#                     clear_unselected,
+#                 ],
+#             ),
+#         )
+#         return conter
+
+# #endregion
