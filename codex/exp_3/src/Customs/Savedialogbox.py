@@ -2,11 +2,12 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-02 09:10:57
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-02 11:37:25
+# @Last Modified time: 2026-04-16 10:12:55
 
 
 import asyncio
-import datetime
+
+# import datetime
 import io
 import multiprocessing
 import os
@@ -22,7 +23,9 @@ from .asyncredis import RedisAPI
 from .byterfiles import BinaryConverter as bc
 from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
 from .jackpot_core import calculate_batch_wrapper, filter_for_pabc, randomData
+from .LotteryRendering import Rendering
 from .svgbase64 import svgimage
+from .env_manager import env_manager
 
 # tracemalloc.start()
 
@@ -46,7 +49,7 @@ class savedialog:
 
     def __builde_conter(self):
         title_color = DraculaColors.ORANGE
-        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         self.genid = randomData.generate_secure_string(8)
         footer = ft.Row(
             controls=[
@@ -207,10 +210,7 @@ class savedialog:
                 if save_png and not is_mobile_or_web:
                     with open(save_png, "wb") as f:
                         f.write(image)
-                        self.adb.page.show_dialog(
-                            ft.SnackBar(f"{self.adb.page.platform} file save complete.")
-                        )
-                # print(f"Storage task completed.")
+                print(f"Storage task completed.")
             except Exception as er:
                 print(f"Image saving error. {er}")
             finally:
@@ -320,8 +320,8 @@ class tadbx:
                 pass_rate = (
                     sum([1 for r in results if _f2func.handle(r)]) / len(results) * 100
                 )
-            except:
-                print(f"{_fitem} Syntax error.")
+            except Exception as er:
+                print(f"{_fitem} Syntax error. {er}")
                 await self.detectstatus.addinfo(
                     f"# {_fitem['condition']} Syntax error."
                 )
@@ -1342,6 +1342,7 @@ class joblibdlg:
                         t.cancel()
                     # 显式吞掉取消可能引发的异常，确保不报警告
                     await asyncio.gather(*tasks, return_exceptions=True)
+            executor.shutdown(wait=True, cancel_futures=True)
         # print("fanhui shuju")
         self.taskbar_value = 1
         self.Launch_Cancelled = "none"
@@ -1460,65 +1461,313 @@ class operates:
 
 # endregion
 
-# #region itemslist_long_pess
-# class itemslist_long_pess:
-#     def __init__(self, mainitems:ft.Column):
-#         self.mainitems = mainitems
-#         self.conten = self.__builde_conter()
-#         self.adb = adbx(None, self.conten)
+
+# region itemslist_long_pess
+class promptdlg:
+    def __init__(
+        self,
+        title: str = "info",
+        info: str = "this is test abd dlg.",
+        typecolor: str = "info",
+        exittime: int = 7,
+    ):
+        self.nowait = False
+        self.exittime = exittime
+        self.typecolor = self.gettypecolor(typecolor)
+        self.conten = self.__builde_conter(title, info)
+        self.adb = adbx(None, self.conten)
+        self.adb.setting_did_mount_callback(self.AutoPopDlg)
+
+    def settinginfo(self, **kwargs):
+        raise AttributeError("settinginfo Deleted. Usage is prohibited.")
+
+    def gettypecolor(self, typecolor: str):
+        color = "#ffffff"
+        match typecolor.lower():
+            case "info":
+                color = RandColor(mode="neon", hue="blue")
+            case "warning":
+                color = RandColor(mode="neon", hue="yellow")
+            case "error":
+                color = RandColor(mode="neon", hue="red")
+        return color
+
+    def handle_close(self):
+        self.adb.page.pop_dialog()
+
+    def handle_click_nowait(self):
+        self.nowait = True
+
+    async def AutoPopDlg(self):
+        count = self.exittime
+        while count != 0:
+            if self.nowait:
+                break
+            self.exitinfo.value = f"Disappears in {count} seconds."
+            if self.adb.page:
+                self.exitinfo.update()
+            await asyncio.sleep(1)
+            count -= 1
+
+        self.handle_close()
+
+    def __builde_conter(self, title: str, info: str):
+        title = ft.Text(
+            f"{title}",
+            size=16,
+            weight="bold",
+            color=self.typecolor,
+        )
+        info = ft.Text(
+            f"{info}",
+            size=14,
+            color=self.typecolor,
+        )
+        exitinfo = ft.Text(
+            f"Disappears in {self.exittime} seconds.",
+            size=12,
+            color=ft.Colors.with_opacity(0.7, DraculaColors.FOREGROUND),
+        )
+
+        onter = ft.Container(
+            padding=5,
+            border_radius=0,
+            content=ft.Column(
+                tight=True,
+                spacing=5,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[title, info, exitinfo],
+            ),
+            on_click=self.handle_click_nowait,
+        )
+        self.exitinfo = exitinfo
+        return onter
 
 
-#     def __builde_conter(self):
-#         len_mainitems = len(self.mainitems.controls) if self.mainitems and self.mainitems.controls else 0
-#         title = ft.Text(
-#             f"How do you want to handle these {len_mainitems} items",
-#             size=18,
-#             weight="bold",
-#             color=DraculaColors.FOREGROUND,
-#         )
-#         maxmin = ft.Row(
-#             spacing=10,
-#             controls=[
-#                 ft.Text("Max: 1000", size=13, color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND)),
-#                 ft.Text("Min: 0", size=13, color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND)),
-#             ],
-#         )
-#         schedule = ft.Text(
-#             "The latest 10 detected items will be displayed here.",
-#             size=13,
-#             color=ft.Colors.with_opacity(0.4, DraculaColors.FOREGROUND),
-#         )
-#         acts = ft.Row(
-#             alignment=ft.MainAxisAlignment.END,
-#             controls=[
-#                 ft.TextButton(
-#                     "Close",
-#                     on_click=self.handle_close,
-#                     style=ft.ButtonStyle(
-#                         color=ft.Colors.with_opacity(0.8, DraculaColors.FOREGROUND)
-#                     ),
-#                 ),
-#             ],
-#         )
-#         self.more_display = ft.Column(tight=True, spacing=5)
-#         self.info_display = ft.Column(tight=True, spacing=5)
-#         onter = ft.Container(
-#             padding=5,
-#             border_radius=0,
-#             content=ft.Column(
-#                 tight=True,
-#                 spacing=5,
-#                 alignment=ft.MainAxisAlignment.START,
-#                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-#                 controls=[
-#                     title,
-#                     ft.Divider(height=1, color=DraculaColors.FOREGROUND),
-#                     clear_all,
-#                     clear_select,
-#                     clear_unselected,
-#                 ],
-#             ),
-#         )
-#         return conter
+# endregion
 
-# #endregion
+
+# region Lotterpng
+class Lotterpng:
+    def __init__(self):
+        self.content = self.__build_content()
+        self.adb = adbx(None, self.content)
+        self.adb.setting_did_mount_callback(self.AutoPopDlg)
+        self.render_image = None
+        self.genid = ""
+
+    def seting_get_all_exp(self, getallexp=None):
+        self.getallexp = getallexp
+
+    def setting_cancel(self, cancel_callback=None):
+        self.cancel_callback = cancel_callback
+
+    def __build_content(self):
+        title = ft.Row(
+            tight=True,
+            controls=[
+                ft.Icon(
+                    icon=ft.Icons.IMAGE,
+                    size=16,
+                    color=DraculaColors.FOREGROUND,
+                ),
+                infotext := ft.Text(
+                    value="Lottery Rendering",
+                    size=16,
+                    color=DraculaColors.FOREGROUND,
+                ),
+            ],
+        )
+        progress = ft.ProgressBar(value=0, bar_height=1, color=RandColor(mode="neon"))
+        content = ft.Container(
+            padding=5,
+            border_radius=0,
+            content=ft.Column(
+                tight=True,
+                spacing=5,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.START,
+                controls=[title, progress],
+            ),
+        )
+        self.progress = progress
+        self.infotext = infotext
+        return content
+
+    def handle_close(self):
+        self.adb.page.pop_dialog()
+
+    def handle_click_nowait(self):
+        self.nowait = True
+
+    def load_exp(self) -> list | None:
+        if self.getallexp:
+            allexp = self.getallexp()
+            return allexp
+
+    async def AutoPopDlg(self):
+        exp = self.getallexp(max_count=100)
+        total = len(exp)
+        if total == 0:
+            self.handle_close()
+            return
+
+        def sync_callback(val, desc):
+            # 内部函数，用于在 Flet 中更新
+            self.progress.value = val
+            self.infotext.value = desc
+            self.infotext.update()
+            self.progress.update()
+
+        # 将同步回调封装为线程安全的调用
+        def thread_safe_callback(val, desc):
+            # 使用 page.run_threadsafe 或者简单的 loop.call_soon_threadsafe
+            # 在 Flet 中，直接修改值并 update 也是可以的，但更严谨的做法是：
+            self.adb.page.loop.call_soon_threadsafe(sync_callback, val, desc)
+
+        # 在后台执行整个渲染任务
+        await asyncio.to_thread(self.render_lotter_sync, thread_safe_callback, exp)
+        await asyncio.sleep(0.5)
+        print(f"render_image sizeof {self.render_image.__sizeof__()}")
+        is_mobile_or_web = self.adb.page.web or self.adb.page.platform in [
+            ft.PagePlatform.ANDROID,
+            ft.PagePlatform.IOS,
+        ]
+        try:
+            png_name = f"{self.genid}.png"
+            save_png = await ft.FilePicker().save_file(
+                file_type=ft.FilePickerFileType.CUSTOM,
+                allowed_extensions=["png"],
+                file_name=png_name,
+                src_bytes=self.render_image,
+            )
+            # print(f"save_path: {save_png}")
+            if save_png and not is_mobile_or_web:
+                with open(save_png, "wb") as f:
+                    f.write(self.render_image)
+        except Exception as er:
+            print(f"Image saving error. {er}")
+        finally:
+            await asyncio.sleep(1)
+            self.handle_close()
+
+    def style_config(self):
+        return {
+            "background": {"fill": "#172433", "opacity": 1, "buffer": True},
+            "image": {
+                "filepath": f"{env_manager.app_assets_dir}/1fa7acf2.png",
+                "rotate": -17.89,
+                "opacity": 0.5,
+                "bottom": -50
+            },
+            "title": {
+                "text": "Today’s Super Jackpot",
+                "name": "RacingSansOne-Regular",
+                "textsize": 60,
+                "text_color": "#FFD000",
+            },
+            "line": {
+                # "text": "01 05 08 10 11 16 17 18 20 56 78 90",  # 文字内容
+                "name": "Inter_18pt-SemiBold",  # 字体
+                "textsize": 30,  # 字号
+                "text_color": "#ffffff",  # 文字颜色
+                "padding_x": 10,  # 左右撑开 40px
+                "padding_y": 10,  # 上下撑开 20px
+                "stroke_width": 0,
+                "bg_fill": "#6b29ce",  # 背景颜色（绿色）
+                "bg_rx": 5,  # 大圆角
+                "bg_stroke": "#ffffff",  # 白色边框
+                "bg_stroke_width": 1,
+                "bg_opacity": 0.45,
+                "margin_bottom": 10,  # 下方留白
+                "expand": True,
+            },
+            "spacing": {"height": 10},
+            "text": {
+                # "text": "Activity rules:\n1. Participate in the lottery\n2. Get rewards\n3. 祝您中的大奖\n4. 宝くじが当たりますように！",
+                "name": "NotoSansSC-Regular",
+                "textsize": 24,
+                "align": "left",
+                "stroke_width": 0,
+                "text_color": RandColor(mode="neon"),
+                "opacity": 1,
+            },
+            "circle": {
+                "size": 45,
+                "fill": "#FF0000",
+                "text_color": "#FFFF00",
+                "opacity": 0.9,
+            },
+        }
+
+    def render_lotter_sync(self, progress_callback, exp_line: list = None):
+        """
+        关键词说明
+        - self
+        - exp_line ["09 10 11 18 19 20 + 14"..]
+        """
+        if exp_line:
+            exp_lines = exp_line
+        else:
+            # 没有设置getallexp直接退出
+            return
+        style_conf = self.style_config()
+        renderer = Rendering(width=400 * 2, height=888 * 2, padding=30, level=0)
+
+        total = len(exp_lines)
+        print(f"exp len {total} Start progress report.")
+        (
+            renderer.set_background(**style_conf["background"])
+            .add_title(**style_conf["title"])
+            .add_image(**style_conf["image"])
+        )
+        progress_callback(0.1, "Background theme rendering completed")
+        # 返回进度和描述
+        # 渲染 文件头
+        for index, line_text in enumerate(exp_lines, start=1):
+            # 构建参数
+            exp_conf = {
+                "text": f"{index}: {line_text}",
+                "text_color": RandColor(mode="neon"),
+                "bg_fill": RandColor(mode="neon"),
+            }
+            line_conf = style_conf["line"]
+            line_conf.update(exp_conf)
+            renderer.add_text_with_bg(**line_conf)
+            if index % 5 == 0 and index != len(exp_lines):
+                renderer.add_spacing(**style_conf["spacing"])
+                text_conf = style_conf["text"]
+                info_conf = {
+                    "text": "God of Wealth Divider.",
+                    "text_color": RandColor(mode="neon"),
+                }
+                text_conf.update(info_conf)
+                renderer.add_text(**text_conf)
+            # 计算进度：从 0.1 到 0.9 之间分配给数据行
+            progress = 0.1 + ((index - 1) / total) * 0.8
+            progress_callback(progress, f"Processing line {index}/{total}")
+
+        renderer.add_text(
+            text="☀ 动动手指, 把藏在云端的幸运领回家.\n☀ 财神爷正在敲门, 请准备好大大的口袋.\n☀ 选下你的心仪数字, 开启一份对生活的期待.",
+            name="NotoSansSC-Regular",
+            textsize=24,
+            align="left",
+            text_color=RandColor(mode="neon"),
+        )
+        # now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        self.genid = randomData.generate_secure_string(8)
+        renderer.add_text(
+            text=f"⊕ {now} {self.genid}",
+            name="NotoSansSC-Regular",
+            textsize=24,
+            align="right",
+            text_color=RandColor(mode="neon"),
+        )
+        # renderer.save(filepath="./sde.png")
+        self.render_image = renderer.RetrieveBytes()
+        progress_callback(1.0, "Rendering completed.")
+
+
+# endregion

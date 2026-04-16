@@ -529,7 +529,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "flet", extras = ["all"], specifier = ">=0.82.2" },
-    { name = "mcp", extras = ["sse"], specifier = ">=1.26.0" },
+    { name = "mcp", specifier = ">=1.26.0" },
     { name = "msgpack", specifier = ">=1.1.0" },
     { name = "pillow" },
     { name = "requests" },

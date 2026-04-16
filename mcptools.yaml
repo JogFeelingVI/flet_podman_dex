@@ -11,8 +11,8 @@ kind: Pod
 metadata:
   creationTimestamp: "2026-04-01T01:56:55Z"
   labels:
-    app: compassionategould-pod
-  name: compassionategould-pod
+    app: MCP-Inspector-pod
+  name: MCP-Inspector-pod
 spec:
   containers:
   - env:
@@ -23,7 +23,7 @@ spec:
     - name: TERM
       value: xterm
     image: ghcr.io/modelcontextprotocol/inspector:latest
-    name: compassionategould
+    name: MCP-Inspector
     ports:
     - containerPort: 6274
       hostPort: 6274

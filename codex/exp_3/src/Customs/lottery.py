@@ -2,11 +2,10 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-02 11:43:45
+# @Last Modified time: 2026-04-13 06:22:54
 
 
 import asyncio
-import os
 import random
 import re
 import time
@@ -18,12 +17,8 @@ from .byterfiles import BinaryConverter as bc
 from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
 from .jackpot_core import calculate_lottery_rdffp, initialization
 from .loger import logr
-from .Savedialogbox import joblibdlg, operates, savedialog, tadbx
-from .svgbase64 import svgimage, check_select
-
-app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
-app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
-jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
+from .Savedialogbox import Lotterpng, joblibdlg, operates, tadbx
+from .svgbase64 import check_select, svgimage
 
 
 # region itemC2plus
@@ -368,15 +363,12 @@ class itemC2plus(ft.Container):
                 self.refresh(name="handle_refresh_data")
             case ft.Icons.STOP:
                 self.state_exp = "stopped"
-            # 如果当前是停止状态，则点击后直接调用 refresh 方法
-        self.page.show_dialog(ft.SnackBar(f"handle refresh data. {self.state_exp}"))
 
     def handle_delete(self, e):
         if self.calc_task_running or self.selected:
             return
         if self.Itemc2_remove:
             self.Itemc2_remove(self)
-        self.page.show_dialog(ft.SnackBar("handle delete."))
 
 
 # endregion
@@ -435,7 +427,7 @@ class itemsList(ft.Container):
                 item.refresh(name="all_refresh")
                 await asyncio.sleep(0.1)
 
-    def get_item_exp(self, max_count: int = 10, data: str = "select"):
+    def get_item_exp(self, max_count: int = 10, data: str = "select") -> list:
         """
         data:
             all
@@ -638,10 +630,13 @@ class commandList(ft.Container):
     def handle_export(self, e):
         # if self.shot_capture:
         #     self.page.run_task(self.shot_capture)
-        sdb = savedialog()
-        sdb.seting_get_all_exp(self.get_exp_all)
-        sdb.setting_cancel(self.export_callback)
-        self.page.show_dialog(sdb.adb)
+        # sdb = savedialog()
+        # sdb.seting_get_all_exp(self.get_exp_all)
+        # sdb.setting_cancel(self.export_callback)
+        # self.page.show_dialog(sdb.adb)
+        lotter = Lotterpng()
+        lotter.seting_get_all_exp(self.get_exp_all)
+        self.page.show_dialog(lotter.adb)
 
     def export_callback(self, exp: list = None):
         if not exp:

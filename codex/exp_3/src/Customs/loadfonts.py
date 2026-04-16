@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-04 05:32:13
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-04 02:03:35
+# @Last Modified time: 2026-04-16 10:11:05
 
 
 import pathlib
@@ -24,7 +24,8 @@ class FontManager:
         self.assets_path = self.__find_assets_dir()
         self.fonts_path = self.assets_path / fonts_subdir
         self.relative_prefix = fonts_subdir
-        self.font_map: Dict[str, str] = self._generate_font_map()
+        self.__font_map: Dict[str, str] = None
+        self.__font_map_abs: Dict[str, str] = None
 
     def __find_assets_dir(self):
         """尝试自动获取 assets 目录路径"""
@@ -33,8 +34,9 @@ class FontManager:
         # print(f"debug: {assets_path}")
         return assets_path / "assets"
 
-    def _generate_font_map(self) -> Dict[str, str]:
+    def __generate_font_map(self) -> Dict[str, str]:
         fonts = {}
+        fonts_abs = {}
         if not self.fonts_path.exists() or not self.fonts_path.is_dir():
             print(f"Warning: Font directory not found at {self.fonts_path}")
             return fonts
@@ -48,14 +50,17 @@ class FontManager:
 
                 # Flet 需要的是相对于 assets 目录的路径
                 # 例如: "fonts/Roboto-Bold.ttf"
+                fonts_abs[font_family_key] = f"{file.absolute()}"
                 fonts[font_family_key] = f"{self.relative_prefix}/{file.name}"
 
-        return fonts
+        return fonts, fonts_abs
 
-    def get_fonts(self):
-        return self.font_map
+    def fonts_map(self, abs: bool = False):
+        if not self.__font_map or not self.__font_map_abs:
+            self.__font_map, self.__font_map_abs = self.__generate_font_map()
+        return self.__font_map if not abs else self.__font_map_abs
 
-
+fsp_fonts = FontManager()
 # endregion
 
 

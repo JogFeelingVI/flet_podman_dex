@@ -2,26 +2,16 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-30 05:49:32
-
-import os
+# @Last Modified time: 2026-04-16 10:11:33
 
 import flet as ft
 from Customs.DraculaTheme import DraculaColors, RandColor
+from Customs.env_manager import env_manager
 from Customs.filter import FilterPage
-from Customs.jackpot_core import randomData
-from Customs.loadfonts import FontManager
+from Customs.loadfonts import FontManager, fsp_fonts
 from Customs.loger import logr
 from Customs.lottery import LotteryPage
 from Customs.setings import SetingsPage
-
-# 获取系统标示
-app_data_path = os.getenv("FLET_APP_STORAGE_DATA")
-app_temp_path = os.getenv("FLET_APP_STORAGE_TEMP")
-app_assets_dir = os.getenv("FLET_ASSETS_DIR")
-jackpot_seting = os.path.join(app_data_path, "jackpot_settings.json")
-
-os.environ["FLET_SECRET_KEY"] = randomData.generate_secure_string(16)
 
 
 async def main(page: ft.Page):
@@ -31,12 +21,14 @@ async def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = ft.Padding.only(top=20)
     page.bgcolor = DraculaColors.BACKGROUND
+    # page.run
 
     # fsp = FastSourcePicker()
     # fsp_fonts = fsp.get_fastest_json()
-    fsp_fonts = FontManager()
-    page.fonts = fsp_fonts.get_fonts()
-    logr.info(f"Registered fonts: {page.fonts}")
+    # fsp_fonts = FontManager()
+    page.fonts = fsp_fonts.fonts_map()
+    for name, path in page.fonts.items():
+        logr.info(f"Registered fonts: {name} {path}")
 
     # --- 4. 预定义底部图标引用 (方便后续动态修改 Badge) ---
     lottery_icon = ft.Icon(
@@ -102,12 +94,9 @@ async def main(page: ft.Page):
 
     # 将内容添加到页面
     page.add(content_area)
-    # page.update()
-    # mcp_server = mcpserver(page.platform)
-    # mcp_server.run_mcp_server()
 
 
 if __name__ == "__main__":
     # multiprocessing.freeze_support()
-    # 运行应用
-    ft.run(main, upload_dir=app_temp_path, assets_dir=app_assets_dir)
+    # 运行应用，使用环境管理器中的路径
+    ft.run(main, upload_dir=env_manager.temp_path, assets_dir=env_manager.assets_dir)

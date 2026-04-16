@@ -2,14 +2,14 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-04 02:53:12
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-24 07:00:52
+# @Last Modified time: 2026-04-03 13:59:02
 
 import itertools
 import re
 import secrets
 from collections import OrderedDict
 from functools import lru_cache
-from typing import List, TypedDict, Set, Tuple
+from typing import List, Set, Tuple, TypedDict
 
 
 # region LotteryData
@@ -170,7 +170,7 @@ class CalcUtils:
                 # 处理 "range 12,56"
                 nums = [int(x) for x in re.findall(r"\d+", base_part)]
                 if len(nums) >= 2:
-                    results = list(range(nums[0], nums[1]))  # 不包含 nums[1]
+                    results = list(range(nums[0], nums[1] + 1))  # 不包含 nums[1]
 
             elif base_part.startswith("<"):
                 # 处理 "<45" -> 0 到 45
@@ -180,7 +180,7 @@ class CalcUtils:
             elif base_part.startswith(">"):
                 # 处理 ">12" -> 13 到 max_limit
                 val = int(re.search(r"\d+", base_part).group())
-                results = list(range(val + 1, max_limit + 1))
+                results = list(range(val, max_limit))
 
             else:
                 # 处理 "12,13,15" 或 "12 13 15"
@@ -226,8 +226,10 @@ class CalcUtils:
 
     @staticmethod
     def average(data_list: list[int]) -> int:
-        if all(isinstance(x, int) for x in data_list):
-            return sum(data_list) // len(data_list)
+        if data_list and all(isinstance(x, int) for x in data_list):
+            avg = sum(data_list) / len(data_list)
+            # 数学技巧：加 0.5 后向下取整，实现绝对四舍五入
+            return int(avg + 0.5)
         return 0
 
     @staticmethod
@@ -290,6 +292,38 @@ def register(func):
     return func
 
 
+def preprocess_source_data(pabc: dict, args: str, target: str):
+    """
+    预处理数据源和指令字符串
+    返回: (处理后的列表, 清理后的指令字符串)
+    """
+    # 1. 基础数据源获取
+    if target not in pabc or target == "all":
+        data = [v for k in sorted(pabc.keys()) for v in pabc[k]]
+    else:
+        data = pabc[target]
+
+    clean_args = args  # 默认干净的指令就是原始指令
+
+    # 2. 如果包含 range 指令，进行切片并清理字符串
+    if args.startswith("range") and target == "all":
+        # 更加宽容的正则，处理可能存在的空格
+        match = re.search(r"range\s+(\d+),(\d+)", args)
+        if match:
+            try:
+                start = int(match.group(1)) - 1
+                end = int(match.group(2))
+                data = data[start:end]
+
+                # 【关键点】删除匹配到的 range 部分，并去除首尾空格
+                # match.end() 会返回匹配结束的位置，我们取之后的字符串
+                clean_args = args[match.end() :].strip()
+            except (ValueError, IndexError):
+                pass
+
+    return data, clean_args
+
+
 class filterFunc:
     @staticmethod
     def getFuncName():
@@ -299,34 +333,25 @@ class filterFunc:
     @register
     @staticmethod
     def avg(pabc: LotteryData, args: str, target: str) -> bool:
-        if target == "all":
-            avgValue = CalcUtils.average([y for x in pabc.values() for y in x])
-        else:
-            avgValue = CalcUtils.average(pabc[target])
-        if avgValue in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        avgValue = CalcUtils.average(data)
+        if avgValue in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def Sum(pabc: LotteryData, args: str, target: str) -> bool:
-        if target == "all":
-            sumValue = sum([y for x in pabc.values() for y in x])
-        else:
-            sumValue = sum(pabc[target])
-        if sumValue in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        if sum(data) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def include(pabc: LotteryData, args: str, target: str) -> bool:
-        targetValue = []
-        if target == "all":
-            targetValue = set([y for x in pabc.values() for y in x])
-        else:
-            targetValue = set(pabc[target])
-        if targetValue & CalcUtils.nwped(args):
+        data, clean_args = set(preprocess_source_data(pabc, args, target))
+        if set(data) & CalcUtils.nwped(clean_args):
             return True
         return False
 
@@ -338,22 +363,19 @@ class filterFunc:
     @register
     @staticmethod
     def bit(pabc: LotteryData, args: str, target: str) -> bool:
-        # print(f' {args=} {target=}')
-        if target == "all":
-            target = list(pabc.keys())[0]
-        pabctarget = pabc[target]
-        if len(pabctarget) == 1:
-            bitValue = pabctarget[0]
-            other_part = args
+        if target not in pabc or target == "all":
+            pabcvalue = [v for k in sorted(pabc.keys()) for v in pabc[k]]
         else:
-            pattern = r"bit(\d+)\s+(.*)"
-            match = re.search(pattern, args)
-            # print(f'{match=}')
-            if not match:
-                return False
-            idx_y = int(match.group(1))  # '2'
-            other_part = match.group(2)  # '>13 --z'
-            bitValue = pabc[target][idx_y - 1]
+            pabcvalue = pabc[target]
+
+        pattern = r"bit(\d+)\s+(.*)"
+        match = re.search(pattern, args)
+        if not match:
+            return False
+        idx_x = int(match.group(1))  # '2'
+        other_part = match.group(2)  # '>13 --z'
+
+        bitValue = pabcvalue[idx_x - 1]
 
         if bitValue in CalcUtils.nwped(other_part):
             return True
@@ -367,15 +389,11 @@ class filterFunc:
     @register
     @staticmethod
     def Ac(pabc: LotteryData, args: str, target: str) -> bool:
-        acValue = []
-        if target == "all":
-            acValue = [y for x in pabc.values() for y in x]
-        else:
-            acValue = pabc[target]
-            if len(acValue) == 1:
-                return False
-        acValue = CalcUtils.ac(pabc[target])
-        if acValue in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        if len(data) == 1:
+            return False
+        acValue = CalcUtils.ac(data)
+        if acValue in CalcUtils.nwped(clean_args):
             return True
         return False
 
@@ -384,25 +402,20 @@ class filterFunc:
     def sum_bit_xy(pabc: LotteryData, args: str, target: str):
         """bit1,2 >13 --z"""
         # print(f'{pabc = } {args=} {target=}')
+        data, clean_args = preprocess_source_data(pabc, args, target)
         pattern = r"bit(\d+),(\d+)\s+(.*)"
-        match = re.search(pattern, args)
+        match = re.search(pattern, clean_args)
         # print(f'{match=}')
         if not match:
             return False
-
-        # 2. 修正字典键的获取
-        if target == "all":
-            sum_bit = [y for x in pabc.values() for y in x]
-        else:
-            sum_bit = pabc[target]
-            if len(sum_bit) == 1:
-                return False
+        if len(data) == 1:
+            return False
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))  # '1'
         idx_y = int(match.group(2))  # '2'
         other_part = match.group(3)  # '>13 --z'
-        bitx = sum_bit[idx_x - 1]
-        bity = sum_bit[idx_y - 1]
+        bitx = data[idx_x - 1]
+        bity = data[idx_y - 1]
         if (bitx + bity) in CalcUtils.nwped(other_part):
             return True
         return False
@@ -411,19 +424,15 @@ class filterFunc:
     @staticmethod
     def diff_bit_xy(pabc: LotteryData, args: str, target: str):
         """bit1,2 >13 --z"""
+        data, clean_args = preprocess_source_data(pabc, args, target)
         pattern = r"bit(\d+),(\d+)\s+(.*)"
-        match = re.search(pattern, args)  # 使用 search 更方便拿分组
+        match = re.search(pattern, clean_args)  # 使用 search 更方便拿分组
 
         if not match:
             return False
 
-        # 2. 修正字典键的获取
-        if target == "all":
-            diff_bit = [y for x in pabc.values() for y in x]
-        else:
-            diff_bit = pabc[target]
-            if len(diff_bit) == 1:
-                return False
+        if len(data) == 1:
+            return False
 
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))  # '1'
@@ -431,8 +440,8 @@ class filterFunc:
         other_part = match.group(3)  # '>13 --z'
 
         # 4. 获取具体号码（注意索引要 -1）
-        val_x = diff_bit[idx_x - 1]
-        val_y = diff_bit[idx_y - 1]
+        val_x = data[idx_x - 1]
+        val_y = data[idx_y - 1]
 
         if abs(val_x - val_y) in CalcUtils.nwped(other_part):
             return True
@@ -442,18 +451,15 @@ class filterFunc:
     @staticmethod
     def mod_x(pabc: LotteryData, args: str, target: str):
         """mod2 >13 --z"""
+        data, clean_args = preprocess_source_data(pabc, args, target)
         pattern = r"mod(\d+)\s+(.*)"
-        match = re.search(pattern, args)
+        match = re.search(pattern, clean_args)
 
-        if target == "all":
-            mod_list = [y for x in pabc.values() for y in x]
-        else:
-            mod_list = pabc[target]
         # 3. 从分组中安全获取值
         idx_x = int(match.group(1))
         other_part = match.group(2)
 
-        modx_sum = sum([x % idx_x for x in mod_list])
+        modx_sum = sum([x % idx_x for x in data])
         if modx_sum in CalcUtils.nwped(other_part):
             return True
         return False
@@ -461,12 +467,8 @@ class filterFunc:
     @register
     @staticmethod
     def any(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            # 将 keys 转为 list 后再取第一个
-            pabcvalue = [y for x in pabc.values() for y in x]
-        else:
-            pabcvalue = pabc[target]
-        if set(pabcvalue) & CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        if set(data) & CalcUtils.nwped(clean_args):
             return True
         return False
 
@@ -480,94 +482,73 @@ class filterFunc:
     @register
     @staticmethod
     def jiSum(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            jishu = [y for x in pabc.values() for y in x]
-        else:
-            jishu = pabc[target]
-        jiList = [x for x in jishu if x % 2 == 1]
-        if sum(jiList) in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        jiList = [x for x in data if x % 2 == 1]
+        if sum(jiList) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def ouSum(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            oushu = [y for x in pabc.values() for y in x]
-        else:
-            oushu = pabc[target]
-        ouList = [x for x in oushu if x % 2 == 0]
-        if sum(ouList) in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        ouList = [x for x in data if x % 2 == 0]
+        if sum(ouList) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def zsSum(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            zhishu = [y for x in pabc.values() for y in x]
-        else:
-            zhishu = pabc[target]
-        zs = CalcUtils.get_primes(max(zhishu))
-        zsList = [x for x in zhishu if x in zs]
-        if sum(zsList) in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        zs = CalcUtils.get_primes(max(data))
+        zsList = [x for x in data if x in zs]
+        if sum(zsList) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def hsSum(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            heshu = [y for x in pabc.values() for y in x]
-        else:
-            heshu = pabc[target]
-        zs = CalcUtils.get_primes(max(heshu))
-        hsList = [x for x in heshu if x not in zs]
-        if sum(hsList) in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        zs = CalcUtils.get_primes(max(data))
+        hsList = [x for x in data if x not in zs]
+        if sum(hsList) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def max(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            maxVale = [y for x in pabc.values() for y in x]
-        else:
-            maxVale = pabc[target]
-        if max(maxVale) in CalcUtils.nwped(args):
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        if max(data) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def min(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            minVale = [y for x in pabc.values() for y in x]
-        else:
-            minVale = pabc[target]
+        data, clean_args = preprocess_source_data(pabc, args, target)
         # minVale = min(minVale)
         # Number_for_args = CalcUtils.nwped(args)
-        if min(minVale) in CalcUtils.nwped(args):
+        if min(data) in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def lianhao(pabc: LotteryData, args: str, target: str):
-        if target == "all":
-            targetv = [y for x in pabc.values() for y in x]
-        else:
-            targetv = pabc[target]
-        _lh = CalcUtils.lianhao(targetv)
+        data, clean_args = preprocess_source_data(pabc, args, target)
+        _lh = CalcUtils.lianhao(data)
         # Number_for_args = CalcUtils.nwped(args)
-        if _lh in CalcUtils.nwped(args):
+        if _lh in CalcUtils.nwped(clean_args):
             return True
         return False
 
     @register
     @staticmethod
     def xiangsidu(pabc: LotteryData, args: str, target: str):
-        if target == "all":
+        if target not in pabc or target == "all":
             targetv = [y for x in pabc.values() for y in x]
         else:
             targetv = pabc[target]
@@ -605,8 +586,14 @@ class filter_for_pabc:
 
     def handle(self, pabc: dict):
         for f_info in self.active_filters:
-            # 这里的调用不再需要解析字符串，不再需要反射，速度提升极快
-            if not f_info["func"](pabc, f_info["parsed_condition"], f_info["target"]):
+            try:
+                if not f_info["func"](
+                    pabc, f_info["parsed_condition"], f_info["target"]
+                ):
+                    return False
+            except Exception as e:
+                # 这里可以选择记录日志或打印错误信息，方便调试
+                print(f"Error in filter {f_info['func'].__name__}: {e}")
                 return False
         return True
 

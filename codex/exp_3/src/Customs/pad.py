@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-22 09:23:29
+# @Last Modified time: 2026-04-15 11:53:03
 
 import random
 import re
@@ -30,8 +30,8 @@ class paditem(ft.Container):
         """构建行中的项目
         kwargs 可包含：
             text:
-                >{n}
-                <{n}
+                n>{n}
+                n<{n}
                 range {n,n}
                 mod{n}
                 {n+}
@@ -82,8 +82,9 @@ class paditem(ft.Container):
 
         def onsizechange(e):
             nonlocal kids_width
-            edit.width = e.width * 1.25
-            # print(f"onsizechange {e=}")
+            new_width = edit.value.__len__() * 15 * 0.7
+            edit.width = e.width + 18
+            print(f"onsizechange {e=}")
 
         show = ft.Text(
             init_val,
@@ -100,10 +101,11 @@ class paditem(ft.Container):
             visible=False,
             color=self.userColor,
             dense=True,
-            width=kids_width,
+            # width=kids_width,
             content_padding=ft.Padding.all(0),
             border=ft.InputBorder.NONE,
             text_align="center",
+            # text_style=ft.TextStyle(font_family="JetBrainsMono-Bold"),
             on_blur=lambda _: self.handle_blur(show, edit, black),
             on_change=lambda e: self.handle_change(show, edit, e),
         )
@@ -151,9 +153,8 @@ class paditem(ft.Container):
         # # print(f"Command after edit: {cmd}")
 
     def handle_change(self, show: ft.Text, edit: ft.TextField, e):
-        show.value = edit.value
-        edit.width = len(e.data) * 10.84 + 14.4
-        # print(f'handle_change {e=} {edit.width=}')
+        show.value = edit.value if edit.value else "1"
+        print(f"edit change {e}")
 
 
 # endreion
@@ -195,8 +196,11 @@ class quickpad(ft.Container):
         self.conten_row.update()
 
     def pop_item(self, index: int = -1):
-        self.conten_row.controls.pop(index)
-        self.conten_row.update()
+        try:
+            self.conten_row.controls.pop(index)
+            self.conten_row.update()
+        except IndexError:
+            print(f"Index {index} out of range for pop_item")
 
     def all_command(self):
         """获取所有项目的指令"""

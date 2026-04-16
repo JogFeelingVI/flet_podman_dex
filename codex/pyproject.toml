@@ -12,8 +12,8 @@ dependencies = [
   "requests",
   "upstash_redis",
   "Pillow",
-  "mcp[sse]>=1.26.0",
-  "msgpack>=1.1.0",
+  "mcp>=1.26.0",
+  "msgpack>=1.1.0"
 ]
 
 [tool.flet]

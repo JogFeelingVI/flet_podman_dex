@@ -2,9 +2,10 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-31 00:56:56
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-03-31 12:51:01
+# @Last Modified time: 2026-04-05 12:53:28
 
-from typing import Literal, List, Optional
+from typing import List, Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -63,6 +64,9 @@ class TaskStatus(BaseModel):
         Field(..., description="任务的当前生命周期阶段")
     )
     elapsed_time: float = Field(..., description="从计算开始到现在所经过的时间（秒）")
+    result_uri: Optional[str] = Field(
+        None, description="当状态为 done 时，读取详细结果的资源 URI"
+    )
 
 
 # endregion

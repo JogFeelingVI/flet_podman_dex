@@ -66,6 +66,7 @@ DejaVuSansMono.ttf: "DejaVu Sans Mono" "Book"
 ##### 修复方案
 1. ~/.config/fontconfig/conf.d/99-podman-fonts.conf 创建这个文件
 2. 文件内容如下
+3. 已经有最新版本的解决方案
 
 ```xml
 <?xml version="1.0"?>

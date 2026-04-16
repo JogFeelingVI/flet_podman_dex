@@ -2,14 +2,44 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-30 10:54:49
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-02 12:38:40
+# @Last Modified time: 2026-04-04 23:59:50
 
-import flet as ft
-import asyncio
+from dataclasses import dataclass
+from enum import Enum
 
-STATUE = ["idle", "calculating", "done", "timeout", "error"]
-HOST = "0.0.0.0"
-PORT = 8000
+
+class StatusEnum(str, Enum):
+    IDLE = "idle"
+    CALCULATING = "calculating"
+    DONE = "done"
+    TIMEOUT = "timeout"
+    ERROR = "error"
+    STOPPED = "stopped"
+
+
+@dataclass
+class StatueData:
+    status: StatusEnum
+    elapsed_time: float
+
+
+@dataclass
+class HostMap:
+    """
+    服务器地址结构类
+    Attributes:
+        host (str): 服务器主机地址
+        port (int): 服务器端口号
+    address (str): 服务器完整地址，格式为 "http://{host}:{port}/sse"
+    """
+
+    host: str
+    port: int
+
+    @property
+    def address(self):
+        return f"http://{self.host}:{self.port}/sse"
+
 
 # region Lotter_Data
 Lotter_Data = {
@@ -83,78 +113,51 @@ Lotter_Data = {
 class LotteryManager:
     def __init__(self):
         self.calc_task_running = False
-        self.status = "idle"
+        self.status = StatueData(StatusEnum.IDLE, 0.0)
         self.timeout = 60
         self.settings = dict()
         self.filters = []
         self.results = []
         self.elapsed_time = 0.0
+        self.hostmap = HostMap(host="0.0.0.0", port=8000)
+        self.logs = []  # 用于存储系统日志的列表
 
     @property
     def check_status(self):
         return self.status
 
     @property
-    def server_address(self):
-        host_map = {"address": f"http://{HOST}:{PORT}/sse", "host": HOST, "port": PORT}
-        return host_map
-    
+    def server_address(self) -> str:
+        return self.hostmap.address
+
+    @property
+    def get_last_100_lines_of_log(self) -> str:
+        """获取系统日志的最后100行，返回为字符串格式"""
+        return self.logs[-100:]
+
     def setting_host(self, host: str):
-        global HOST
-        HOST = host
-        
+        self.hostmap.host = host
+        self.logs.append(f"Host updated to {host}")
+
     def setting_port(self, port: int):
-        global PORT
-        PORT = port
+        self.hostmap.port = port
+        self.logs.append(f"Port updated to {port}")
 
+    def updatehostmap(self, hostmap: HostMap):
+        self.hostmap = hostmap
 
-def get_supported_lotteries() -> str:
-    """
-    获取系统支持的所有彩票类型、描述以及它们的规则（球的范围和抽取个数）。
-    当用户询问可以计算哪些彩票，或者想了解特定彩票的玩法时，调用此工具。
-    同时支持告知用户可以自定义彩票参数。
-    """
-    summary = ["### 当前支持的预设彩票类型:"]
-
-    for name, info in Lotter_Data.items():
-        desc = info.get("description", "无描述")
-        rules = []
-
-        # 1. 自动提取所有符合规则的键 (例如 PA, PB, SA, SB 等)
-        # 逻辑：如果键 K 的值是长度为 2 的列表，且存在 K_K，则它是一个球组定义
-        # 我们对键进行排序，以保证显示顺序是 A, B, C...
-        potential_keys = sorted([k for k in info.keys() if not k.endswith("_K")])
-
-        for key in potential_keys:
-            count_key = f"{key}_K"
-            if (
-                count_key in info
-                and isinstance(info[key], list)
-                and len(info[key]) == 2
-            ):
-                r_min, r_max = info[key]
-                count = info[count_key]
-
-                # 美化显示：去除 P/S 前缀，保留 A, B, C...
-                # 如果 key 是 "PA"，显示 "A组"；如果是 "Custom"，就显示 "Custom组"
-                group_name = key[1:] if len(key) > 1 and key[0] in ("P", "S") else key
-                rules.append(f"{group_name}组: {r_min}-{r_max} 选 {count} 个")
-
-        rule_str = ", ".join(rules)
-        summary.append(f"- **{name}**: {desc}\n  *规则: {rule_str}*")
-
-    summary.append("\n### 自定义能力:")
-    summary.append(
-        "你可以提供任意数量的球组。只需为每组定义范围 `[min, max]` 和抽取个数 `K`."
-    )
-    return "\n".join(summary)
+    async def background_calculation_worker(self, name: str, timeout: int):
+        # 这里是计算逻辑的占位符
+        # 实际实现中会根据 self.settings 中的规则进行计算，并定期更新 self.status 和 self.elapsed_time
+        self.logs.append(
+            f"Started background calculation for {name} with timeout {timeout} seconds."
+        )
+        return
 
 
 def main():
     print("Hello, World!")
     lm = LotteryManager()
-    markdown = get_supported_lotteries()
-    print(markdown)
     print(f"{lm.server_address['address']}")
 
 
