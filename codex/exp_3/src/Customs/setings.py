@@ -2,12 +2,13 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-14 06:24:51
+# @Last Modified time: 2026-04-22 13:05:11
 
 import asyncio
 import os
 import pathlib
 import re
+import json
 
 import flet as ft
 
@@ -20,6 +21,7 @@ from .lotterMange import Lotter_Data
 from .mcp_fast import ReadSMS, is_server_healthy, run_mcp_server, stop_mcp_server
 from .Savedialogbox import promptdlg, upstashtoken
 from .svgbase64 import mcpicon, svgimage, upstashicon
+from .gen_id_manager import system_conf
 
 
 # region input_user_rule
@@ -563,22 +565,9 @@ class DefaultSettings(ft.Container):
             self.render_filters()
 
     async def Regenerate_handle_click(self, e):
-        id = f"{randomData.generate_secure_string(8)}"
-        self.stored_path = os.path.join(env_manager.app_temp_path, f"gen_{id}.dict")
-        filePath = pathlib.Path(self.stored_path)
-        for item in filePath.parent.iterdir():
-            if (
-                item.is_file() or item.is_symlink() and item.name.startswith("gen_")
-            ):  # 确保只删除文件
-                logr.info(f"Regenerate_id Delete {item.name}.")
-                item.unlink()
-        filePath.parent.mkdir(parents=True, exist_ok=True)
-        filePath.write_text("")
-        storedid = {"path": self.stored_path, "id": id}
-        b64str = bc.to_base64(storedid)
-        if b64str:
-            await ft.SharedPreferences().set("storedid", b64str)
-            _pdlg = promptdlg("Regenerate ID", f"Regenerate id {id}")
+            system_conf.set_stored_id().set_stored_path()
+            newid = system_conf.get_stored_id()
+            _pdlg = promptdlg("Regenerate ID", f"Regenerate id {newid}")
             self.page.show_dialog(_pdlg.adb)
 
     def __build_card(self):
@@ -670,13 +659,12 @@ class rsup(ft.Container):
 
     def did_mount(self):
         self.running = True
-        self.page.run_task(self.verify_data)
+        # self.page.run_task(self.verify_data)
 
     def will_unmount(self):
         self.running = False
 
     async def verify_data(self):
-        await self.verdict_upstash()
         await self.verdict_mcp_server()
 
     async def verdict_mcp_server(self):
@@ -691,23 +679,28 @@ class rsup(ft.Container):
 
         self.mcpbt.update()
 
-    async def verdict_upstash(self):
-        """改变token按钮显示内容"""
+    def __read_upstash(self):
+        """读取 upstash token 数据"""
+        default_config = {
+            "token": "",
+            "api": "",
+            "sync": False,
+            "status": "invalid",
+            "message": "Config not found",
+            "updated_at": 0,
+            "note": "",
+        }
         try:
-            jsondata = await ft.SharedPreferences().get("upstash")
-            temp = bc.from_base64(jsondata)
-            if temp:
-                self.tokenbt.value = "Token Activation"
-                bgc = RandColor(hue="green")
-                self.upstash_bg_change.bgcolor = ft.Colors.with_opacity(0.3, bgc)
-                self.upstash_bg_change.border = ft.Border.all(
-                    1, ft.Colors.with_opacity(0.4, bgc)
-                )
-                self.tokenbt.update()
-                self.upstash_bg_change.update()
-
+            with open(env_manager.upstash_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 2. 使用 update 确保即使用户手动改乱了 JSON，缺少的字段也会被默认值补齐
+                # 这样你的 Flet 页面访问 data["token"] 就永远不会报错
+                full_config = default_config.copy()
+                full_config.update(data)
+                return full_config
         except Exception as ex:
-            logr.info(f"verdict_upstash is error, {ex}")
+            logr.error(f"Failed to read configuration: {ex}")
+            return default_config
 
     def __build_conter(self):
         upmcp = RandColor(mode="neon")
@@ -736,6 +729,8 @@ class rsup(ft.Container):
             on_click=self.handle_cilck_mcp,
         )
         upbgc = RandColor(mode="neon", hue="red")
+        upstash_data = self.__read_upstash()
+        upstash_status = upstash_data.get("status", "invalid")
         upstash = ft.Container(
             padding=ft.Padding(10, 5, 10, 5),
             alignment=ft.Alignment.CENTER,
@@ -759,6 +754,11 @@ class rsup(ft.Container):
             ),
             on_click=self.handle_cilck_token,
         )
+        if upstash_status == "valid":
+            tokenbt.value = "Token Activation"
+            upstash.bgcolor = ft.Colors.with_opacity(0.3, upbgc)
+            upstash.border = ft.Border.all(1, ft.Colors.with_opacity(0.4, upbgc))
+        # 测试对话框
         testadb = ft.Container(
             padding=ft.Padding(10, 5, 10, 5),
             alignment=ft.Alignment.CENTER,
@@ -808,11 +808,8 @@ class rsup(ft.Container):
         token = upstashtoken()
         token.setting_apply_callback(self.handle_callback)
         self.page.show_dialog(token.adb)
-        jsondata = await ft.SharedPreferences().get("upstash")
-        if jsondata:
-            token.setting_valid_info(jsondata=jsondata)
-            self.upstash = True
-        await self.verdict_upstash()
+        jsondata = self.__read_upstash()
+        token.setting_valid_info(data=jsondata)
 
     async def handle_cilck_mcp(self):
         if self.mcp_server_running:
@@ -842,11 +839,20 @@ class rsup(ft.Container):
 
     async def handle_callback(self, jsondata: dict):
         """设置加密 upstash 数据"""
-        if jsondata:
-            b64str = bc.to_base64(jsondata)
-            if b64str:
-                await ft.SharedPreferences().set("upstash", b64str)
-            self.page.run_task(self.verdict_upstash)
+        upstash_data = jsondata
+        # print(f'handle_callback: {upstash_data}')
+        if upstash_data.get("status") == "valid":
+            self.tokenbt.value = "Token Activation"
+            bgc = RandColor(hue="green")
+            self.upstash_bg_change.bgcolor = ft.Colors.with_opacity(0.3, bgc)
+            self.upstash_bg_change.border = ft.Border.all(
+                1, ft.Colors.with_opacity(0.4, bgc)
+            )
+            # print(f'path: {env_manager.upstash_file} \n data: {upstash_data}')
+            with open(env_manager.upstash_file, "w", encoding="utf-8") as f:
+                json.dump(upstash_data, f, ensure_ascii=False, indent=4)
+            logr.info("Upstash token saved successfully.")
+            self.update()
 
 
 # endregion

@@ -60,6 +60,7 @@ class FontManager:
             self.__font_map, self.__font_map_abs = self.__generate_font_map()
         return self.__font_map if not abs else self.__font_map_abs
 
+
 fsp_fonts = FontManager()
 # endregion
 

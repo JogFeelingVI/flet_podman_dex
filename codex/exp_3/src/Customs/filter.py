@@ -2,10 +2,11 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-10 15:23:07
+# @Last Modified time: 2026-04-22 13:32:12
 
 import asyncio
 import hashlib
+import json
 import os
 
 import flet as ft
@@ -19,6 +20,7 @@ from .jackpot_core import filterFunc
 from .loger import logr
 from .pad import quickpad
 from .Savedialogbox import CustomSwitch, promptdlg
+from .gen_id_manager import system_conf
 
 
 # region FilterChipV2
@@ -321,41 +323,35 @@ class FiltersList(ft.Container):
                 await self._save_to_local()
 
                 # 2. 如果开启了同步，处理云端逻辑
-                if self.upstash and self.upstash.get("sync"):
-                    await self._sync_with_cloud()
+                if (
+                    self.upstash
+                    and self.upstash.get("sync")
+                    and self.upstash.get("status") == "valid"
+                ):
+                    # await self._sync_with_cloud()
+                    # 这里出现错误需要处理
+                    # AttributeError: 'NoneType' object has no attribute 'loop'
+                    # self.page.run_task(self._sync_with_cloud)
+                    asyncio.create_task(self._sync_with_cloud())
             except Exception as e:
                 logr.error(f"Error during sync process: {e}", exc_info=True)
 
     async def _save_to_local(self) -> bool:
         """核心逻辑：本地保存"""
         if self.filtersAll_change == "none":
-            return True  # 没有变动不需要保存
-
-        # 获取存储路径
-        stored_id_b64 = await ft.SharedPreferences().get("storedid")
-        config_info = bc.from_base64(stored_id_b64)
-
-        if not config_info or "path" not in config_info:
-            logr.error("Local save path not found.")
-            return False
-
-        if self.filtersAll_change == "none":
             logr.info("Data does not need to be saved.")
-            return
-
-        # 保存到磁盘 (MsgPack)
-        if bc.save(config_info["path"], self.filtersAll):
-            # 更新 Session 缓存
-            self.page.session.store.set("filters", bc.to_base64(self.filtersAll))
-            logr.info("Local configuration saved. [Local]")
-            return True
-        return False
+            return False
+        # filters_path = system_conf.get_stored_path()
+        system_conf.write_to_file(data=self.filtersAll)
+        self.page.session.store.set("filters", bc.to_base64(self.filtersAll))
+        logr.info("Local configuration saved. [Local]")
+        return True
 
     async def _sync_with_cloud(self):
         """核心逻辑：云端同步 (Upstash)"""
         if not self.upredis_api:
             self.upredis_api = RedisAPI(
-                url=self.upstash["url"], token=self.upstash["token"]
+                url=self.upstash["api"], token=self.upstash["token"]
             )
 
         # 1. 检查是否有远端更新（避免覆盖别人的更新）
@@ -402,20 +398,62 @@ class FiltersList(ft.Container):
         self.page.session.store.set("filters", bc.to_base64(data.get("filters")))
 
         # 更新 UI 组件 (注意这里可能会比较耗时)
-        self.clear_all()
-        for filter_item in data.get("filters", []):
-            self.addFilter(filter_item, redis_async=True)
-            # 这里的 sleep 可能是为了 UI 渲染，如果 addFilter 很快可以去掉
-            await asyncio.sleep(0.05)
+        # 这里需要修改代码
+        # self.clear_all()
+        # for filter_item in data.get("filters", []):
+        #     print(filter_item)
+        #     self.addFilter(filter_item, redis_async=True)
+        #     # 这里的 sleep 可能是为了 UI 渲染，如果 addFilter 很快可以去掉
+        #     await asyncio.sleep(0.1)
+
+        # {'func': 'mod_x', 'target': 'PA', 'condition': 'mod11 <36 --m312'}
+        filters = data.get("filters", [])
+        filters_cp = filters.copy()
+        # print(f"Applying cloud filters: {filters[0:5]}...")
+        row_len = len(self.content.controls)
+        # 如果 row_len == 1，说明只有那个按钮行，没有 filter chip，可以直接添加
+        if row_len == 1:
+            for filter_item in filters:
+                self.addFilter(filter_item, redis_async=True)
+                await asyncio.sleep(0.1)
+        elif row_len > 1:
+            # row_len > 1 说已经添加新数据
+            remove_items = []
+            for item in self.content.controls:
+                if isinstance(item, FilterChipV2):
+                    scp = item.data
+                    # print(f"Checking filter: {ruff(scp)}...")
+                    if scp in filters:
+                        filters_cp.remove(scp)
+                    else:
+                        remove_items.append(item)
+            for filter_item in filters_cp:
+                self.addFilter(filter_item, redis_async=True)
+                await asyncio.sleep(0.1)
+            for item in remove_items:
+                if item in self.content.controls:
+                    self.content.controls.remove(item)
+
         self.filtersAll_change = "cloud"
         self.local_last_update = cloud_raw.get("_updated_at", 0)
         logr.info("Cloud data applied to UI.")
 
     async def load_upstash_confing(self):
         """界面判断是否已经设置 upstash"""
-        b64 = await ft.SharedPreferences().get("upstash")
-        self.upstash = bc.from_base64(b64, default={})
-        if self.upstash:
+        default_config = {
+            "token": "",
+            "api": "",
+            "sync": False,
+            "status": "invalid",
+            "message": "Config not found",
+            "updated_at": 0,
+            "note": "",
+        }
+        with open(env_manager.upstash_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            full_config = default_config.copy()
+            full_config.update(data)
+            self.upstash = full_config
             logr.info("Cloud sync config loaded.")
 
     # endregion
@@ -1014,20 +1052,12 @@ class CommandList(ft.Container):
         logr.info("long press run cls.")
 
     async def handle_Open(self, e):
-        b64str = await ft.SharedPreferences().get("storedid")
-        storedid = bc.from_base64(b64str)
-        _pdlg = promptdlg(
-            title="tips", info="storedid not found.", typecolor="warning", exittime=3
-        )
-        if not storedid:
-            self.page.show_dialog(_pdlg.adb)
-            return
-
+        # b64str = await ft.SharedPreferences().get("storedid")
+        filtered_content = system_conf.open_from_file()
         if self.filter_clear_all:
             self.filter_clear_all()
         try:
-            jackpot_setting_content = bc.load(storedid["path"])
-            for line in jackpot_setting_content:
+            for line in filtered_content:
                 if self.filterAddItem:
                     self.filterAddItem(line)
         except Exception as er:
@@ -1039,12 +1069,12 @@ class CommandList(ft.Container):
             )
             self.page.show_dialog(_pdlg.adb)
             return
-        b64str = bc.to_base64(jackpot_setting_content)
+        b64str = bc.to_base64(filtered_content)
         if b64str:
             self.page.session.store.set("filters", b64str)
             _pdlg = promptdlg(
                 title="Finish",
-                info=f"Reading complete. {len(jackpot_setting_content)}",
+                info=f"Reading complete. {len(filtered_content)}",
                 typecolor="info",
             )
             self.page.show_dialog(_pdlg.adb)

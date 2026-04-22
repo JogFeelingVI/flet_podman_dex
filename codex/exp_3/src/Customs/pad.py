@@ -2,11 +2,12 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-15 11:53:03
+# @Last Modified time: 2026-04-21 02:49:07
 
 import random
 import re
 
+from click import clear
 import flet as ft
 
 from .DraculaTheme import RandColor
@@ -78,13 +79,12 @@ class paditem(ft.Container):
         )
 
     def __build_editable_unit(self, init_val: str):
-        kids_width = 18
+        kids_width = 15
 
         def onsizechange(e):
             nonlocal kids_width
-            new_width = edit.value.__len__() * 15 * 0.7
-            edit.width = e.width + 18
-            print(f"onsizechange {e=}")
+            edit.width = e.width + 15
+            # print(f"onsizechange {e=}")
 
         show = ft.Text(
             init_val,
@@ -97,16 +97,20 @@ class paditem(ft.Container):
         edit = ft.TextField(
             value=init_val,
             cursor_height=15,
-            text_size=15,
+            # text_size=15,
             visible=False,
-            color=self.userColor,
+            # color=self.userColor,
+            # bgcolor=ft.Colors.with_opacity(0.5, RandColor(mode="Morandi", hue="red")),
+            text_style=ft.TextStyle(
+                weight="bold", size=15, color=RandColor(mode="Morandi", hue="red")
+            ),
             dense=True,
             # width=kids_width,
             content_padding=ft.Padding.all(0),
             border=ft.InputBorder.NONE,
             text_align="center",
-            # text_style=ft.TextStyle(font_family="JetBrainsMono-Bold"),
             on_blur=lambda _: self.handle_blur(show, edit, black),
+            on_submit=lambda _: self.handle_blur(show, edit, black),
             on_change=lambda e: self.handle_change(show, edit, e),
         )
         black = ft.Container(
@@ -118,7 +122,14 @@ class paditem(ft.Container):
             ),
             border_radius=3,
             bgcolor=ft.Colors.with_opacity(0.1, self.userColor),
-            content=ft.Stack(alignment=ft.Alignment.CENTER, controls=[show, edit]),
+            # content=ft.Stack(alignment=ft.Alignment.CENTER, controls=[show, edit]),
+            content=ft.Row(
+                controls=[show, edit],
+                spacing=0,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+                tight=True,
+            ),
             # content=edit,
             on_click=lambda _: self.handle_click(show, edit, black),
         )
@@ -130,6 +141,7 @@ class paditem(ft.Container):
     def will_unmount(self):
         self.running = False
 
+    @property
     def command(self):
         """获取编辑后的指令"""
         cmd = []
@@ -143,18 +155,26 @@ class paditem(ft.Container):
     def handle_click(self, show: ft.Text, edit: ft.TextField, black: ft.Container):
         show.visible = False
         edit.visible = True
+        # await edit.focus()
         black.update()
 
     def handle_blur(self, show: ft.Text, edit: ft.TextField, black: ft.Container):
         show.visible = True
         edit.visible = False
         black.update()
-        self.command()
-        # # print(f"Command after edit: {cmd}")
 
     def handle_change(self, show: ft.Text, edit: ft.TextField, e):
-        show.value = edit.value if edit.value else "1"
-        print(f"edit change {e}")
+        text = e.data
+
+        clear_value = re.sub(r"[0-9zhjowm,]", "", text)
+        if clear_value:
+            text = text.replace(clear_value, "")
+        if text == "":
+            text = "0"
+        edit.value = text
+        edit.update()
+        show.value = text
+        # print(f"edit change {clear_value} {show.value} {e=}")
 
 
 # endreion
@@ -207,7 +227,7 @@ class quickpad(ft.Container):
         cmds = []
         for item in self.conten_row.controls:
             if isinstance(item, paditem):
-                cmds.append(item.command())
+                cmds.append(item.command)
         return " ".join(cmds)
 
     def replacement(self, text: str = None):

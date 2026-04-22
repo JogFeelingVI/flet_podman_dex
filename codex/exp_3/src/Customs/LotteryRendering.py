@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-04-11 06:15:53
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-16 10:01:41
+# @Last Modified time: 2026-04-18 05:51:20
 
 import dis
 import io
@@ -364,6 +364,7 @@ class Rendering:
         - right: int None
         - align: str 水平对齐方式, left/center/right, 默认 center
         - buffer 默认False 立即执行 True 最后执行
+        - trim: bool 是否清除图像边缘的透明区域，默认为 True
         """
 
         # 1. 加载图片并转为 RGBA 模式
@@ -374,6 +375,7 @@ class Rendering:
         if buffer:
             self.buffer_task.append({"add_image": kwargs})
             return self
+        trim = kwargs.get("trim", True)  # 增加一个开关
         width = kwargs.get("width", None)
         height = kwargs.get("height", None)
         rotate = kwargs.get("rotate", 0)
@@ -386,16 +388,22 @@ class Rendering:
         overlay = Image.open(filepath).convert("RGBA")
         orig_w, orig_h = overlay.size
 
-        # 2. 尺寸处理 (自动比例计算)
-        if width and not height:
-            height = int(width * (orig_h / orig_w))
-        elif height and not width:
-            width = int(height * (orig_w / orig_h))
-        elif not width and not height:
-            width, height = orig_w, orig_h
+        if trim:
+            # getbbox() 返回非零区域的坐标: (left, top, right, bottom)
+            # 如果整张图都是透明的，它会返回 None
+            bbox = overlay.getbbox()
+            if bbox:
+                overlay = overlay.crop(bbox)
 
-        if (width, height) != (orig_w, orig_h):
-            overlay = overlay.resize((width, height), Image.LANCZOS)
+        # 2. 尺寸处理 (自动比例计算)
+        if width or height:
+            if width and not height:
+                height = int(width * (orig_h / orig_w))
+            elif height and not width:
+                width = int(height * (orig_w / orig_h))
+            # 如果都有或只有其一，resize
+            overlay_size = (int(width), int(height))
+            overlay = overlay.resize(overlay_size, Image.LANCZOS)
 
         # 3. 旋转处理
         if rotate != 0:
@@ -403,6 +411,7 @@ class Rendering:
             overlay = overlay.rotate(rotate, expand=True, resample=Image.BICUBIC)
         # 旋转后尺寸会发生变化，重新获取
         img_w, img_h = overlay.size
+
         # 4. 透明度处理
         if opacity < 1.0:
             # 分离通道
@@ -435,6 +444,7 @@ class Rendering:
         else:
             # 默认居中（或者你可以根据需要修改默认逻辑）
             y = (canvas_h - img_h) // 2
+
         # 6. 合并图片
         # 第三个参数 overlay 是作为遮罩（mask），确保透明度生效
         # self.canvas.paste(overlay, (int(x), int(y)), overlay)
@@ -825,12 +835,19 @@ def test_Background():
 # region test_log_list
 def test_log_list():
     style_conf = {
-        "background": {"fill": "#131C26", "opacity": 1},
+        "background": {"fill": "#131C26", "opacity": 1, "buffer": True},
         "title": {
             "text": "Today’s Super Jackpot",
             "name": "RacingSansOne-Regular",
             "textsize": 60,
             "text_color": "#FFD000",
+        },
+        "image": {
+            "filepath": f"./1fa7acf2.png",
+            "rotate": 0,
+            "opacity": 0.5,
+            "bottom": 0,
+            "buffer": True,
         },
         "line": {
             # "text": "01 05 08 10 11 16 17 18 20 56 78 90",  # 文字内容
@@ -870,25 +887,29 @@ def test_log_list():
         "03 07 21 23 29 33 + 03",
         "01 11 17 18 22 32 + 04",
         "15 18 20 26 31 32 + 02",
-        "03 11 21 27 29 30 + 01",
-        "04 07 17 23 24 26 + 04",
-        "09 11 12 16 28 30 + 02",
-        "03 05 15 19 29 33 + 03",
-        "08 15 19 23 28 29 + 02",
-        "20 21 22 28 29 33 + 02",
-        "05 10 15 22 24 30 + 03",
-        "03 05 10 13 20 24 + 04",
-        "05 08 12 15 22 23 + 02",
-        "01 03 09 18 30 32 + 02",
-        "01 12 13 19 27 30 + 01",
-        "04 07 12 16 25 32 + 04",
-        "02 09 12 18 19 25 + 01",
-        "07 13 21 23 25 29 + 03",
-        "01 04 06 18 19 32 + 02",
-        "04 05 08 14 18 20 + 02",
-        "08 14 21 22 27 28 + 01",
+        # "03 11 21 27 29 30 + 01",
+        # "04 07 17 23 24 26 + 04",
+        # "09 11 12 16 28 30 + 02",
+        # "03 05 15 19 29 33 + 03",
+        # "08 15 19 23 28 29 + 02",
+        # "20 21 22 28 29 33 + 02",
+        # "05 10 15 22 24 30 + 03",
+        # "03 05 10 13 20 24 + 04",
+        # "05 08 12 15 22 23 + 02",
+        # "01 03 09 18 30 32 + 02",
+        # "01 12 13 19 27 30 + 01",
+        # "04 07 12 16 25 32 + 04",
+        # "02 09 12 18 19 25 + 01",
+        # "07 13 21 23 25 29 + 03",
+        # "01 04 06 18 19 32 + 02",
+        # "04 05 08 14 18 20 + 02",
+        # "08 14 21 22 27 28 + 01",
     ]
-    renderer.set_background(**style_conf["background"]).add_title(**style_conf["title"])
+    (
+        renderer.set_background(**style_conf["background"])
+        .add_title(**style_conf["title"])
+        .add_image(**style_conf["image"])
+    )
     # 渲染 文件头
     for index, line_text in enumerate(exp_lines, start=1):
         # 构建参数
@@ -933,5 +954,5 @@ def test_log_list():
 
 
 if __name__ == "__main__":
-    test_Rendering()
-    # test_log_list()
+    # test_Rendering()
+    test_log_list()

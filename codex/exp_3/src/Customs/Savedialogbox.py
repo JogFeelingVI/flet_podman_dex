@@ -2,12 +2,13 @@
 # @Author: JogFeelingVI
 # @Date:   2026-03-02 09:10:57
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-16 10:12:55
+# @Last Modified time: 2026-04-21 00:05:38
 
 
 import asyncio
 
 # import datetime
+from calendar import c
 import io
 import multiprocessing
 import os
@@ -251,9 +252,8 @@ class TaskState:
     info: str = ""
     task: str = "none"
 
-    async def addinfo(self, text: str) -> str:
+    def addinfo(self, text: str) -> str:
         self.info = f"{text}"
-        await asyncio.sleep(0.3)
 
     def getinfo(self) -> str:
         info = self.info
@@ -287,76 +287,18 @@ class tadbx:
     def __handle_start(self, e):
         if self.adb.running and self.detectstatus.task == "none":
             self.detectstatus.task = "Detection"
-            self.adb.page.run_task(self.Detection)
-            self.adb.page.run_task(self.showresult)
+            # 旧版采用异步更新放
+            # self.adb.page.run_task(self.Detection)
+            # self.adb.page.run_task(self.showresult)
+            # 新版采用callbakc的方法
+            self.adb.page.run_task(self.Detection_Filter_callback)
 
-    async def Detection(self):
-        await self.detectstatus.addinfo("Load 'settings' and 'filters' data.")
-        # await asyncio.sleep(0.3)
-        settings = self.adb.page.session.store.get("settings")
-        filters = self.adb.page.session.store.get("filters")
+    async def Detection_Filter_callback(self):
+        """采用callback 实时驱动界面"""
+        adb_page = self.adb.page
 
-        settings = bc.from_base64(settings)
-        filters = bc.from_base64(filters)
-
-        if not filters or filters == []:
-            await self.detectstatus.addinfo("If filters is empty, skip the detection.")
-            # await asyncio.sleep(0.3)
-            self.detectstatus.task = "skip"
-            return
-
-        await self.detectstatus.addinfo("Create a data pool.")
-        if settings:
-            _rdpn = randomData(seting=settings["randomData"])
-            results = []
-            for i in range(1000):
-                results.append(_rdpn.get_pabc())
-        await asyncio.sleep(0.3)
-        for i, _fitem in enumerate(filters):
-            # print(f"{_fitem}")
-            try:
-                _f2func = filter_for_pabc(filters=[_fitem])
-
-                pass_rate = (
-                    sum([1 for r in results if _f2func.handle(r)]) / len(results) * 100
-                )
-            except Exception as er:
-                print(f"{_fitem} Syntax error. {er}")
-                await self.detectstatus.addinfo(
-                    f"# {_fitem['condition']} Syntax error."
-                )
-                self.detectstatus.task = "error"
-                return
-            prinfo = [
-                f"{_fitem['func']}",
-                f"{_fitem['target']}",
-                f"{_fitem['condition']}",
-                int(pass_rate),
-            ]
-            self.detectstatus.jdu = (i + 1) / len(filters)
-            self.detectstatus.additem(prinfo)
-            await self.detectstatus.addinfo(
-                f"{_fitem['func']} {_fitem['target']} {_fitem['condition']}"
-            )
-            if pass_rate < 1.0:
-                await self.detectstatus.addinfo(
-                    f"# {_fitem['condition']} Logical error."
-                )
-                self.detectstatus.task = "pass_rate_zero"
-                return
-
-        self.detectstatus.task = "none"
-
-    async def showresult(self):
-        while self.detectstatus.task in [
-            "Detection",
-            "pass_rate_zero",
-            "skip",
-            "error",
-        ]:
-            await asyncio.sleep(0.3)
-            text = self.detectstatus.getinfo()
-            if text:
+        def update_callback():
+            if (text := self.detectstatus.getinfo()) is not None:
                 self.info_display.controls[0].value = text
             self.smax.content.value = self.detectstatus.max_value
             self.smin.content.value = self.detectstatus.min_value
@@ -367,11 +309,79 @@ class tadbx:
             self.adb.content.update()
             if self.detectstatus.task in ["pass_rate_zero", "skip", "error"]:
                 self.detectstatus.task = "none"
-                return
 
-        self.info_display.controls[0].value = "Test complete ✔"
-        self.info_display.controls[0].update()
-        await self.update_more_list()
+        def safe_callback():
+            # 使用 page.run_threadsafe 或者简单的 loop.call_soon_threadsafe
+            # 在 Flet 中，直接修改值并 update 也是可以的，但更严谨的做法是：
+            adb_page.loop.call_soon_threadsafe(update_callback)
+            time.sleep(0.1)  # 模拟一些处理时间，实际中可以根据需要调整或去掉
+
+        try:
+            await asyncio.to_thread(self.Detection_Filter, safe_callback)
+            await asyncio.sleep(0.5)
+        except Exception as er:
+            self.detectstatus.task = "error"
+            print(f"Detection_Filter_callback error. {er}")
+        finally:
+            self.detectstatus.task = "none"
+            adb_page.update()
+            await self.update_more_list()
+
+    def Detection_Filter(self, callback):
+        self.detectstatus.task = "Detection"
+        settings = self.adb.page.session.store.get("settings")
+        filters = self.adb.page.session.store.get("filters")
+        settings = bc.from_base64(settings)
+        filters = bc.from_base64(filters)
+
+        self.detectstatus.addinfo("Load settings & filters data.")
+        callback()
+
+        if not filters or not settings:
+            self.detectstatus.addinfo("If filters/settings is empty.")
+            # await asyncio.sleep(0.3)
+            self.detectstatus.task = "skip"
+            callback()
+            return
+
+        results = []
+        _rdpn = randomData(seting=settings["randomData"])
+        for _ in range(1000):
+            results.append(_rdpn.get_pabc())
+        self.detectstatus.addinfo(f"Create a data pool, {len(results)}.")
+        callback()
+        print("start test filters...")
+        for i, _fitem in enumerate(filters):
+            try:
+                _f2func = filter_for_pabc(filters=[_fitem])
+                pass_rate = (
+                    sum([1 for r in results if _f2func.handle(r)]) / len(results) * 100
+                )
+            except Exception as er:
+                self.detectstatus.addinfo(f"⚠️ {_fitem['condition']} Syntax error.")
+                self.detectstatus.task = "error"
+                callback()
+                return
+            prinfo = [
+                f"{_fitem['func']}",
+                f"{_fitem['target']}",
+                f"{_fitem['condition']}",
+                int(pass_rate),
+            ]
+            self.detectstatus.jdu = (i + 1) / len(filters)
+            self.detectstatus.additem(prinfo)
+            self.detectstatus.addinfo(
+                f"{_fitem['func']} {_fitem['target']} {_fitem['condition']}"
+            )
+            callback()
+            if pass_rate < 1.0:
+                self.detectstatus.addinfo(f"⚠️ {_fitem['condition']} Logical error.")
+                self.detectstatus.task = "pass_rate_zero"
+                callback()
+                return
+        self.detectstatus.addinfo("🍻 Test complete.")
+        self.detectstatus.task = "done"
+        callback()
 
     def __builde_conter(self):
         title = ft.Row(
@@ -742,11 +752,10 @@ class upstashtoken:
     def setting_apply_callback(self, callblack):
         self.applycallback = callblack
 
-    def setting_valid_info(self, jsondata: str):
-        data = bc.from_base64(jsondata)
+    def setting_valid_info(self, data: dict):
         if data:
             self.intoken.value = data["token"]
-            self.intoken_url.value = data["url"]
+            self.intoken_url.value = data["api"]
             self.syncsw.value = data["sync"]
             self.valid_data = data
             self.adb.update()
@@ -783,17 +792,17 @@ class upstashtoken:
 
         # 3. 缓存检测（如果信息没变且之前验证过，直接生效并退出）
         # 使用 dict.get 更加安全，防止 KeyError
-        if (
-            self.valid_data
-            and self.valid_data.get("valid")
-            and self.valid_data.get("token") == token
-            and self.valid_data.get("url") == token_url
-        ):
-            self.valid_data["sync"] = self.syncsw.value
-            if self.applycallback:
-                self.adb.page.run_task(self.applycallback, self.valid_data)
-            self.adb.page.pop_dialog()
-            return
+        # if (
+        #     self.valid_data
+        #     and self.valid_data.get("status") == "valid"
+        #     and self.valid_data.get("token") == token
+        #     and self.valid_data.get("api") == token_url
+        # ):
+        #     self.valid_data["sync"] = self.syncsw.value
+        #     if self.applycallback:
+        #         self.adb.page.run_task(self.applycallback, self.valid_data)
+        #     self.adb.page.pop_dialog()
+        #     return
 
         # 4. 开始 API 测试流程
         await show_tip("Connecting to Upstash...", DraculaColors.YELLOW)
@@ -822,12 +831,17 @@ class upstashtoken:
 
                 if self.applycallback:
                     backdata = {
+                        # new data
                         "token": token,
-                        "url": token_url,
-                        "valid": True,
+                        "api": token_url,
                         "sync": self.syncsw.value,
+                        "status": "valid",
+                        "message": "token is valid and data saved successfully.",
+                        "updated_at": int(time.time()),
+                        "note": f"User updated token settings at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}",
                     }
-                    self.adb.page.run_task(self.applycallback, backdata)
+                    # print(f'backdata: {backdata}')
+                    await self.applycallback(backdata)
 
                 self.adb.page.pop_dialog()
                 return  # 修复 Bug：验证成功后必须 return，防止穿透到下面
@@ -1659,7 +1673,8 @@ class Lotterpng:
                 "filepath": f"{env_manager.app_assets_dir}/1fa7acf2.png",
                 "rotate": -17.89,
                 "opacity": 0.5,
-                "bottom": -50
+                "top": 0,
+                "buffer": True,
             },
             "title": {
                 "text": "Today’s Super Jackpot",

@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-13 06:22:54
+# @Last Modified time: 2026-04-20 23:46:05
 
 
 import asyncio
@@ -55,8 +55,11 @@ class itemC2plus(ft.Container):
         self.animate = ft.Animation(300, ft.AnimationCurve.EASE)
 
         if Calculation_Results:
-            self.state_exp = "done"
+            self.state_exp = "results"
             self.tempd = Calculation_Results
+            self.showNumber.controls = self.displayNumbersv2(
+                Calculation_Results
+            ).controls
             self.CALCR = "SELECT"
 
     # region generate_data_background
@@ -70,114 +73,125 @@ class itemC2plus(ft.Container):
             filters = bc.from_base64(filters)
             self.rdffp = initialization(settings, filters)
 
-    # 定义一个内部逻辑协程
-    async def calculation_loop(self):
-        while self.state_exp == "calculating":
-            tempd, state = await asyncio.to_thread(calculate_lottery_rdffp, *self.rdffp)
-            if state:
-                self.tempd = tempd
-                self.state_exp = "done"
-                break
-            self.elapsed_time = time.time() - self.start_time
-            await asyncio.sleep(0.3)
-
-    async def generate_data_background(self, name: str):
-        if self.calc_task_running:
-            return  # 如果已经在后台计算了，就不重复启动
-
-        # logr.info(f"Start Data Generation {name}")
-        self.calc_task_running = True
-        self.state_exp = "calculating"
-        self.start_time = time.time()
-
-        try:
-            await asyncio.wait_for(self.calculation_loop(), timeout=self.timeout)
-        except asyncio.TimeoutError:
-            logr.warning("Data generation timed out.")
-            self.state_exp = "timeout"
-
-        except Exception as e:
-            logr.error(f"Error in background data generation: {str(e)}", exc_info=True)
-            self.state_exp = "error"
-        finally:
-            self.calc_task_running = False
-
-    # endregion
-
-    # region update ui
-    async def ui_update_loop(self):
-        # 只要页面在显示（mounted），就持续轮询刷新UI
-        while self.running:
-            self.sync_ui_to_state()
-
-            # 如果状态已经结束，刷新最后一次后跳出UI轮询
-            if self.state_exp in ["done", "timeout", "error", "stopped"]:
-                break
-
-            await asyncio.sleep(0.3)  # UI 刷新频率
-
-    # ==========================================
-    # 辅助方法：根据当前状态渲染界面
-    # ==========================================
-    def sync_ui_to_state(self):
-        # 安全检查：防止在 unmount 的瞬间调用更新
-        if not self.running:
-            return
-
-        self.buildBadge.content.value = f"{self.elapsed_time:.2f}"
-        self.buildBadge.update()
-        # logr.info(f'update time {self.elapsed_time:.2f}')
-
-        last_state = getattr(self, "_last_state_exp", None)
-        if self.state_exp == last_state:
-            # 如果状态没有发生改变 则直接跳出
-            return
-
-        if self.state_exp == "calculating":
-            self.showNumber.controls = self.displayshow("Please wait...").controls
-            if self.ref_stop.content.icon != ft.Icons.STOP:
-                self.ref_stop.content = ft.Icon(ft.Icons.STOP, color=DraculaColors.RED)
-                self.ref_stop.update()
-
-        elif self.state_exp == "done":
-            self.showNumber.controls = self.displayNumbersv2(self.tempd).controls
-            if self.ref_stop.content.icon != ft.Icons.REFRESH:
-                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
-                self.ref_stop.update()
-
-        elif self.state_exp == "timeout":
-            self.showNumber.controls = self.displayshow(
-                f"Timeout after {self.elapsed_time:.2f}s"
-            ).controls
-            if self.ref_stop.content.icon != ft.Icons.REFRESH:
-                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
-                self.ref_stop.update()
-
-        elif self.state_exp == "error":
-            self.showNumber.controls = self.displayshow(
-                "TProgram execution error."
-            ).controls
-            if self.ref_stop.content.icon != ft.Icons.REFRESH:
-                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
-                self.ref_stop.update()
-
-        elif self.state_exp == "stopped":
-            self.showNumber.controls = self.displayshow(
-                f"Stopped at {self.elapsed_time:.2f}s"
-            ).controls
-            if self.ref_stop.content.icon != ft.Icons.REFRESH:
-                self.ref_stop.content = ft.Icon(ft.Icons.REFRESH, color=self.userColor)
-                self.ref_stop.update()
-
-        self._last_state_exp = self.state_exp
-
-        if self.CALCR == "SELECT":
+    async def generate_data_callback(self, name: str = "None"):
+        if self.state_exp == "results":
+            # print(f'这里是外部生成好了数据直接执行')
+            self.state_exp = "done"
             e_temp = ft.Event(name="click", control=self.check, data="sync_ui_to_state")
             self.handle_Selected(e_temp)
+            return
+        logr.info(f"Start Data Generation with callback {name}")
+        if self.calc_task_running == True:
+            return
+        self.calc_task_running = True
+        self.start_time = time.time()
+        self.state_exp = "calculating"
 
-        self.update()
+        def sync_callback(progress: float, desc: str):
+            # 内部函数，用于在 Flet 中更新
+            last_state = getattr(self, "_last_state_exp", None)
+            # self.buildBadge.content.value = f"{progress * 100:.2f}%"
+            # self.buildBadge.update()
+            self.progress.value = progress
+            self.progress.update()
+            if self.state_exp == last_state:
+                return
 
-    # endregion
+            match self.state_exp:
+                case "calculating":
+                    if self.ref_stop.content.icon != ft.Icons.STOP:
+                        self.ref_stop.content = ft.Icon(
+                            ft.Icons.STOP, color=DraculaColors.RED
+                        )
+                        self.ref_stop.update()
+                    self.showNumber.controls = self.displayshow(f"{desc}").controls
+                    self.showNumber.update()
+                case "stopped" | "timeout" | "error":
+                    if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                        self.ref_stop.content = ft.Icon(
+                            ft.Icons.REFRESH, color=self.userColor
+                        )
+                        self.ref_stop.update()
+                    self.showNumber.controls = self.displayshow(f"{desc}").controls
+                    self.showNumber.update()
+                case "done":
+                    if self.ref_stop.content.icon != ft.Icons.REFRESH:
+                        self.ref_stop.content = ft.Icon(
+                            ft.Icons.REFRESH, color=self.userColor
+                        )
+                        self.ref_stop.update()
+                    self.showNumber.controls = self.displayNumbersv2(desc).controls
+                    self.showNumber.update()
+            self._last_state_exp = self.state_exp
+
+        def safe_callback(progress: float, desc: str):
+            # 使用 page.run_threadsafe 或者简单的 loop.call_soon_threadsafe
+            # 在 Flet 中，直接修改值并 update 也是可以的，但更严谨的做法是：
+            self.page.loop.call_soon_threadsafe(sync_callback, progress, desc)
+
+        await asyncio.to_thread(self.generate_data, safe_callback)
+        await asyncio.sleep(0.5)
+        self.calc_task_running = False
+
+    def generate_data(self, callback):
+        """
+        优化后的异步数据生成函数
+        callback: 建议格式为 callback(progress_value, message_or_data)
+        """
+        # 1. 初始化检查
+        self.load_rdffp(Forced=True)
+        self.start_time = time.time()
+        self.state_exp = "calculating"
+
+        # 确保 timeout 有效
+        timeout = getattr(self, "timeout", 60) or 60
+
+        # 初始状态回调
+        callback(0.01, "Starting calculation...")
+
+        # 记录上一次更新 UI 的时间，防止更新太快导致卡顿 (Throttling)
+        last_update_time = 0
+        update_interval = 0.2  # 每 0.2 秒最多更新一次 UI
+
+        try:
+            while self.state_exp == "calculating":
+                # 执行计算 (如果这个函数很耗时，建议在线程池运行，见下方提示)
+                tempd, state = calculate_lottery_rdffp(*self.rdffp)
+
+                # 计算进度
+                elapsed = time.time() - self.start_time
+                progress = min(
+                    elapsed / timeout, 1.0
+                )  # 0.0 到 1.0 适合 Flet ProgressBar
+
+                # 检查是否停止
+                if self.state_exp == "stopped":
+                    callback(progress, f"stopped at {progress * 100:.1f}%.")
+                    return
+
+                # 成功完成
+                if state:
+                    self.tempd = tempd
+                    self.state_exp = "done"
+                    callback(progress, tempd)  # 完成时发送数据
+                    break
+
+                # 超时检查
+                if progress >= 1.0:
+                    self.state_exp = "timeout"
+                    callback(1.0, "Calculation timed out.")
+                    break
+
+                # 频率控制：避免每一轮循环都更新 UI
+                current_time = time.time()
+                if current_time - last_update_time > update_interval:
+                    callback(progress, "Calculating...")
+                    last_update_time = current_time
+
+        except Exception as e:
+            logr.error(f"Error in generate_data: {str(e)}", exc_info=True)
+            self.state_exp = "error"
+            callback(progress, f"Error: {str(e)}")
 
     def displayshow(self, msg: str, size=35):
         text = ft.Text(
@@ -228,27 +242,8 @@ class itemC2plus(ft.Container):
         #     # self.refresh(name="did_mount")
         #     self.page.run_task(self.SearchForData, name="did_mount")
         self.running = True
-
-        # 1. 启动后台计算任务（如果还没启动，且当前还没计算完成）
-        if (
-            not self.calc_task_running
-            and self.state_exp
-            not in [
-                "done",
-                "timeout",
-                "error",
-            ]
-            and not self.tempd
-        ):
-            self.load_rdffp()
-            self.state_exp = "calculating"
-            self.page.run_task(self.generate_data_background, name="background_task")
-
-        # 2. 页面重新显示时，无条件进行一次UI强同步，保证不漏掉后台已经在算的结果
-        # self.sync_ui_to_state()
-        # 3. 如果后台还在计算中，启动 UI 刷新轮询
-        # if self.state_exp == "calculating":
-        self.page.run_task(self.ui_update_loop)
+        if not self.calc_task_running and self.state_exp != "done":
+            self.page.run_task(self.generate_data_callback, name="did_mount")
 
     def will_unmount(self):
         self.running = False
@@ -256,17 +251,24 @@ class itemC2plus(ft.Container):
     # endregion
 
     def __build__badge(self, size: int = 20, text: str = "0"):
-        self.buildBadge = ft.Container(
-            content=ft.Text(
-                f"{text}",
-                size=size * 0.5,
-                weight="bold",
-                color=DraculaColors.FOREGROUND,
-                text_align=ft.TextAlign.CENTER,
-            ),
-            padding=ft.Padding(8, 5, 8, 5),
+        # self.buildBadge = ft.Container(
+        #     content=ft.Text(
+        #         f"{text}",
+        #         size=size * 0.5,
+        #         weight="bold",
+        #         color=DraculaColors.FOREGROUND,
+        #         text_align=ft.TextAlign.CENTER,
+        #     ),
+        #     padding=ft.Padding(8, 5, 8, 5),
+        # )
+        self.progress = ft.ProgressBar(
+            value=0,
+            bar_height=3,
+            color=self.userColor,
+            expand=True,
+            bgcolor=ft.Colors.with_opacity(0.3, self.userColor),
         )
-        return self.buildBadge
+        return self.progress
 
     def handle_Selected(self, e):
         if self.state_exp != "done":
@@ -326,6 +328,7 @@ class itemC2plus(ft.Container):
                     controls=[
                         # self.__build_tips(),
                         self.__build__badge(text="0"),
+                        ft.Container(width=8),
                         ref_setop := self.__build_Butter(
                             26, ft.Icons.REFRESH, self.handle_refresh_data
                         ),
@@ -346,14 +349,14 @@ class itemC2plus(ft.Container):
     def refresh(self, name: str = "None"):
         if self.calc_task_running or self.selected:
             return
-        self.state_exp = "calculating"
         self.ref_stop.content = ft.Icon(ft.Icons.STOP)
-        self.load_rdffp(Forced=True)
-        self.page.run_task(self.generate_data_background, name=name)
-        self.sync_ui_to_state()
-        # 3. 如果后台还在计算中，启动 UI 刷新轮询
-        if self.state_exp == "calculating":
-            self.page.run_task(self.ui_update_loop)
+        # self.page.run_task(self.generate_data_background, name="background_task")
+        self.page.run_task(self.generate_data_callback, name="refresh")
+        # self.page.run_task(self.generate_data_background, name=name)
+        # self.sync_ui_to_state()
+        # # 3. 如果后台还在计算中，启动 UI 刷新轮询
+        # if self.state_exp == "calculating":
+        #     self.page.run_task(self.ui_update_loop)
 
     def handle_refresh_data(self, e):
         """右滑逻辑：刷新数据"""
@@ -624,6 +627,7 @@ class commandList(ft.Container):
         )
 
     def handle_test(self, e):
+        """测试所有过滤器"""
         tdb = tadbx()
         self.page.show_dialog(tdb.adb)
 

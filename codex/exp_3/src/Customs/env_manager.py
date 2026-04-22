@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-04-03 13:00:00
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-03 13:00:00
+# @Last Modified time: 2026-04-18 01:24:26
 
 """环境变量管理模块。
 
@@ -35,6 +35,12 @@ class EnvManager:
             else None
         )
 
+        self.upstash_seting = (
+            os.path.join(self.app_data_path, "upstash.json")
+            if self.app_data_path
+            else None
+        )
+
         # 设置 Flet 密钥
         os.environ["FLET_SECRET_KEY"] = randomData.generate_secure_string(16)
 
@@ -57,6 +63,11 @@ class EnvManager:
     def settings_file(self):
         """获取设置文件路径。"""
         return self.jackpot_seting
+
+    @property
+    def upstash_file(self):
+        """获取 Upstash 文件路径。"""
+        return self.upstash_seting
 
 
 # 创建全局实例，方便导入使用
