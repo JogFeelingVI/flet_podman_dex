@@ -650,8 +650,8 @@ class rsup(ft.Container):
         self.padding = 10
         self.gradient = self.__gradient()
         self.width = float("inf")
-        self.border_radius = 14
-        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.5, self.splitColor[0]))
+        self.border_radius = 10
+        self.border = ft.Border.all(1, ft.Colors.with_opacity(0.3, self.splitColor[0]))
         self.alignment = ft.Alignment.CENTER
         self.running = False
         self.content = self.__build_conter()
@@ -779,7 +779,7 @@ class rsup(ft.Container):
         row = ft.Row(
             spacing=5,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.END,
             scroll=ft.ScrollMode.HIDDEN,
             controls=[upstash, mcpstart],
         )
@@ -793,7 +793,7 @@ class rsup(ft.Container):
             begin=ft.Alignment.CENTER_LEFT,  # 渐变开始位置（上方）
             end=ft.Alignment.CENTER_RIGHT,  # 渐变结束位置（下方）
             colors=[
-                ft.Colors.with_opacity(0.7, x) for x in self.splitColor
+                ft.Colors.with_opacity(0.2, x) for x in self.splitColor
             ],  # 颜色从蓝到黑
         )
         return grd

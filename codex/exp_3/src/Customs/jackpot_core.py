@@ -350,7 +350,7 @@ class filterFunc:
     @register
     @staticmethod
     def include(pabc: LotteryData, args: str, target: str) -> bool:
-        data, clean_args = set(preprocess_source_data(pabc, args, target))
+        data, clean_args = preprocess_source_data(pabc, args, target)
         if set(data) & CalcUtils.nwped(clean_args):
             return True
         return False

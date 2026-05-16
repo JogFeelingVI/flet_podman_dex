@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-22 13:32:12
+# @Last Modified time: 2026-04-23 13:45:58
 
 import asyncio
 import hashlib
@@ -373,9 +373,7 @@ class FiltersList(ft.Container):
         # 2. 如果本地是较新的，上传到云端
         settings_b64 = self.page.session.store.get("settings")
         settings = bc.from_base64(settings_b64)
-
         payload = {"setting": settings, "filters": self.filtersAll}
-
         # 转换并上传
         payload_b64 = bc.to_base64(payload)
         success, timestamp = await self.upredis_api.save_sync_data(
@@ -1146,8 +1144,6 @@ class CommandList(ft.Container):
                 logr.info(f"Reading complete. {len(load_data)}")
         except Exception as er:
             logr.error(f"handle_Load error. {er}", exc_info=True)
-
-
 # endregion
 
 

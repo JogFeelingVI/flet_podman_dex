@@ -2,7 +2,7 @@
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-20 23:46:05
+# @Last Modified time: 2026-05-15 02:07:15
 
 
 import asyncio
@@ -94,7 +94,7 @@ class itemC2plus(ft.Container):
             # self.buildBadge.update()
             self.progress.value = progress
             self.progress.update()
-            if self.state_exp == last_state:
+            if self.state_exp == last_state and self.state_exp != "done":
                 return
 
             match self.state_exp:

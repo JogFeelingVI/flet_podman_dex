@@ -154,6 +154,7 @@ class paditem(ft.Container):
 
     def handle_click(self, show: ft.Text, edit: ft.TextField, black: ft.Container):
         show.visible = False
+        edit.value = show.value
         edit.visible = True
         # await edit.focus()
         black.update()
@@ -165,14 +166,13 @@ class paditem(ft.Container):
 
     def handle_change(self, show: ft.Text, edit: ft.TextField, e):
         text = e.data
-
         clear_value = re.sub(r"[0-9zhjowm,]", "", text)
         if clear_value:
             text = text.replace(clear_value, "")
-        if text == "":
-            text = "0"
         edit.value = text
         edit.update()
+        if text == "":
+            text = "0"
         show.value = text
         # print(f"edit change {clear_value} {show.value} {e=}")
 

@@ -6,7 +6,6 @@
 import json
 import os
 import pathlib
-import re
 
 try:
     from .jackpot_core import randomData
