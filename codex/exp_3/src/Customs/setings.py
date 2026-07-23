@@ -2,11 +2,9 @@
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-22 13:05:11
+# @Last Modified time: 2026-07-23 10:19:17
 
 import asyncio
-import os
-import pathlib
 import re
 import json
 
@@ -17,10 +15,9 @@ from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
 from .env_manager import env_manager
 from .jackpot_core import randomData
 from .loger import logr
-from .lotterMange import Lotter_Data
-from .mcp_fast import ReadSMS, is_server_healthy, run_mcp_server, stop_mcp_server
+from .lotterMangex import Lotter_Data
 from .Savedialogbox import promptdlg, upstashtoken
-from .svgbase64 import mcpicon, svgimage, upstashicon
+from .svgbase64 import svgimage, upstashicon
 from .gen_id_manager import system_conf
 
 
@@ -655,7 +652,7 @@ class rsup(ft.Container):
         self.alignment = ft.Alignment.CENTER
         self.running = False
         self.content = self.__build_conter()
-        self.mcp_server_running = False
+        # self.mcp_server_running = False
 
     def did_mount(self):
         self.running = True
@@ -663,21 +660,6 @@ class rsup(ft.Container):
 
     def will_unmount(self):
         self.running = False
-
-    async def verify_data(self):
-        await self.verdict_mcp_server()
-
-    async def verdict_mcp_server(self):
-        is_alive = await is_server_healthy()  # 用 requests 探测
-
-        if is_alive:
-            self.mcp_server_running = True
-            self.mcpbt.value = "MCP On"  # 或者是 self.mcpbt.text
-        else:
-            self.mcp_server_running = False
-            self.mcpbt.value = "MCP Off"
-
-        self.mcpbt.update()
 
     def __read_upstash(self):
         """读取 upstash token 数据"""
@@ -703,31 +685,8 @@ class rsup(ft.Container):
             return default_config
 
     def __build_conter(self):
-        upmcp = RandColor(mode="neon")
-        mcpstart = ft.Container(
-            padding=ft.Padding(10, 5, 10, 5),
-            alignment=ft.Alignment.CENTER,
-            border_radius=8,
-            border=ft.Border.all(1, ft.Colors.with_opacity(0.4, upmcp)),
-            bgcolor=ft.Colors.with_opacity(0.3, upmcp),
-            content=ft.Row(
-                tight=True,
-                controls=[
-                    ft.Image(
-                        src=mcpicon(),
-                        height=25,
-                        # width=35 * 3.45,
-                        repeat=ft.ImageRepeat.NO_REPEAT,
-                        fit=ft.BoxFit.CONTAIN,
-                    ),
-                    mcpbt := ft.Text(
-                        "MCP Off", size=16, color=DraculaColors.FOREGROUND
-                    ),
-                ],
-            ),
-            disabled=False,
-            on_click=self.handle_cilck_mcp,
-        )
+        """MCP OF"""
+        
         upbgc = RandColor(mode="neon", hue="red")
         upstash_data = self.__read_upstash()
         upstash_status = upstash_data.get("status", "invalid")
@@ -781,9 +740,9 @@ class rsup(ft.Container):
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.END,
             scroll=ft.ScrollMode.HIDDEN,
-            controls=[upstash, mcpstart],
+            controls=[upstash] # mcpstart],
         )
-        self.mcpbt = mcpbt
+        # self.mcpbt = mcpbt
         self.tokenbt = tokenbt
         self.upstash_bg_change = upstash
         return row
@@ -811,31 +770,6 @@ class rsup(ft.Container):
         jsondata = self.__read_upstash()
         token.setting_valid_info(data=jsondata)
 
-    async def handle_cilck_mcp(self):
-        if self.mcp_server_running:
-            await stop_mcp_server()
-            self.mcpbt.value = "MCP Off"
-            self.mcpbt.update()
-            self.mcp_server_running = False
-            await self.verdict_mcp_server()
-            return
-        self.page.run_task(run_mcp_server)
-        success = False
-        for _ in range(50):  # 50 * 0.1s = 5s
-            sms = ReadSMS()
-            if sms:
-                logr.info(f"Read SMA: {sms}")
-            if await is_server_healthy():  # 调用之前写的 requests 检查函数
-                success = True
-                break
-            await asyncio.sleep(0.1)
-
-        if success:
-            self.mcp_server_running = True
-            logr.info("MCP Server Started successfully.")
-        else:
-            logr.info("MCP Server Start timeout.")
-        await self.verdict_mcp_server()  # 更新 UI 显示
 
     async def handle_callback(self, jsondata: dict):
         """设置加密 upstash 数据"""

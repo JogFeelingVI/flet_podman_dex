@@ -2,12 +2,10 @@
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
-# @Last Modified time: 2026-04-21 02:49:07
+# @Last Modified time: 2026-07-23 10:39:51
 
 import random
 import re
-
-from click import clear
 import flet as ft
 
 from .DraculaTheme import RandColor

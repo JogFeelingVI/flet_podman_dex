@@ -8,7 +8,7 @@ import flet as ft
 from Customs.DraculaTheme import DraculaColors, RandColor
 from Customs.env_manager import env_manager
 from Customs.filter import FilterPage
-from Customs.loadfonts import FontManager, fsp_fonts
+from Customs.loadfonts import fsp_fonts
 from Customs.loger import logr
 from Customs.lottery import LotteryPage
 from Customs.setings import SetingsPage
