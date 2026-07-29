@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-03-02 09:10:57
 # @Last Modified by:   JogFeelingVI
@@ -6,6 +5,7 @@
 
 
 import asyncio
+
 # import datetime
 import io
 import multiprocessing
@@ -21,10 +21,10 @@ from .adbox import adbx
 from .asyncredis import RedisAPI
 from .byterfiles import BinaryConverter as bc
 from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
+from .env_manager import env_manager
 from .jackpot_core import calculate_batch_wrapper, filter_for_pabc, randomData
 from .LotteryRendering import Rendering
 from .svgbase64 import svgimage
-from .env_manager import env_manager
 
 # tracemalloc.start()
 
@@ -209,7 +209,7 @@ class savedialog:
                 if save_png and not is_mobile_or_web:
                     with open(save_png, "wb") as f:
                         f.write(image)
-                print(f"Storage task completed.")
+                print("Storage task completed.")
             except Exception as er:
                 print(f"Image saving error. {er}")
             finally:
@@ -268,7 +268,7 @@ class TaskState:
         if not sord:
             return self.result[-10:]
         else:
-            temp = list(sorted(self.result, key=lambda x: x[-1]))
+            temp = sorted(self.result, key=lambda x: x[-1])
             return temp
 
 
@@ -355,7 +355,7 @@ class tadbx:
                 pass_rate = (
                     sum([1 for r in results if _f2func.handle(r)]) / len(results) * 100
                 )
-            except Exception as er:
+            except Exception:
                 self.detectstatus.addinfo(f"⚠️ {_fitem['condition']} Syntax error.")
                 self.detectstatus.task = "error"
                 callback()
@@ -1056,7 +1056,7 @@ class joblibdlg:
             if timeout_limit == 0 and target_quantity == 0:
                 timeout_limit = 60
 
-            max_time = max_time if max_time < 60 else 60
+            max_time = min(60, max_time)
 
             if timeout_limit == 0 and target_quantity >= 1:
                 timeout_limit = 60 * max_time

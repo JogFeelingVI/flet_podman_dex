@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-02-22 16:21:36
 # @Last Modified by:   JogFeelingVI
@@ -6,6 +5,7 @@
 
 import random
 import re
+
 import flet as ft
 
 from .DraculaTheme import RandColor

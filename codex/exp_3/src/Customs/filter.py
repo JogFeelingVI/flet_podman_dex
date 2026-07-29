@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-01-01 12:20:24
 # @Last Modified by:   JogFeelingVI
@@ -16,11 +15,11 @@ from .asyncredis import RedisAPI
 from .byterfiles import BinaryConverter as bc
 from .DraculaTheme import DraculaColors, HarmonyColors, RandColor
 from .env_manager import env_manager
+from .gen_id_manager import system_conf
 from .jackpot_core import filterFunc
 from .loger import logr
 from .pad import quickpad
 from .Savedialogbox import CustomSwitch, promptdlg
-from .gen_id_manager import system_conf
 
 
 # region FilterChipV2
@@ -975,7 +974,7 @@ class CommandList(ft.Container):
                     title="Finish", info=f"{self.page.platform} file save complete."
                 )
                 self.page.show_dialog(_pdlg.adb)
-        except Exception as er:
+        except Exception:
             _pdlg = promptdlg(
                 title="error",
                 info=f"{self.page.platform} file save complete.",

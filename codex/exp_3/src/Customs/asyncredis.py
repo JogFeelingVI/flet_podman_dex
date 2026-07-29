@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-03-11 03:59:47
 # @Last Modified by:   JogFeelingVI
@@ -7,7 +6,7 @@
 
 import json
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from upstash_redis.asyncio import Redis
 
@@ -31,7 +30,7 @@ class RedisAPI:
         self._prefix = "auth:token:"
         self._data_prefix = "app:syncdata:"
 
-    async def verify_token(self, user_token: str) -> Dict[str, Any]:
+    async def verify_token(self, user_token: str) -> dict[str, Any]:
         """
         检测用户提供的 Token 是否有效
         :param user_token: 用户输入的 Token 字符串
@@ -122,7 +121,7 @@ class RedisAPI:
             print(f"[RedisAPI Error] Failed to save sync data: {e}")
             return False, current_timestamp
 
-    async def get_sync_data(self, key_suffix: str) -> Optional[dict]:
+    async def get_sync_data(self, key_suffix: str) -> dict | None:
         """
         读取并解析云端的字典数据
         :param key_suffix: 数据的唯一标识

@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-03-21 11:05:27
 # @Last Modified by:   JogFeelingVI
 # @Last Modified time: 2026-03-23 02:59:05
 import base64
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import msgpack
 
@@ -14,7 +13,7 @@ class BinaryConverter:
     """使用 MsgPack 处理对象与二进制/Base64 之间的转换"""
 
     @staticmethod
-    def save(path: Union[str, Path], obj: Any) -> bool:
+    def save(path: str | Path, obj: Any) -> bool:
         """
         将对象序列化并保存到文件
         :return: 成功返回 True，失败返回 False
@@ -28,7 +27,7 @@ class BinaryConverter:
             return False
 
     @staticmethod
-    def load(path: Union[str, Path], default: Any = None) -> Any:
+    def load(path: str | Path, default: Any = None) -> Any:
         """
         从文件读取并反序列化对象
         :param default: 如果读取失败（如文件不存在、格式错误），返回的默认值
@@ -41,7 +40,7 @@ class BinaryConverter:
             return default
 
     @staticmethod
-    def to_base64(obj: Any) -> Optional[str]:
+    def to_base64(obj: Any) -> str | None:
         """将对象转换为 Base64 字符串"""
         try:
             binary_data = msgpack.packb(obj, use_bin_type=True)

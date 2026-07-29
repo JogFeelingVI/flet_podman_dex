@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 09:47:48
 # @Last Modified by:   JogFeelingVI
@@ -189,9 +188,9 @@ class itemC2plus(ft.Container):
                     last_update_time = current_time
 
         except Exception as e:
-            logr.error(f"Error in generate_data: {str(e)}", exc_info=True)
+            logr.error(f"Error in generate_data: {e!s}", exc_info=True)
             self.state_exp = "error"
-            callback(progress, f"Error: {str(e)}")
+            callback(progress, f"Error: {e!s}")
 
     def displayshow(self, msg: str, size=35):
         text = ft.Text(

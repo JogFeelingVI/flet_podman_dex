@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-04-11 06:15:53
 # @Last Modified by:   JogFeelingVI
@@ -841,7 +840,7 @@ def test_log_list():
             "text_color": "#FFD000",
         },
         "image": {
-            "filepath": f"./1fa7acf2.png",
+            "filepath": "./1fa7acf2.png",
             "rotate": 0,
             "opacity": 0.5,
             "bottom": 0,

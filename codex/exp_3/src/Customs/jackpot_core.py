@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-01-04 02:53:12
 # @Last Modified by:   JogFeelingVI
@@ -9,22 +8,22 @@ import re
 import secrets
 from collections import OrderedDict
 from functools import lru_cache
-from typing import List, Set, Tuple, TypedDict
+from typing import TypedDict
 
 
 # region LotteryData
 class LotteryData(TypedDict, total=False):
     # total=False 表示这些键不是每一个都必须同时出现
-    PA: List[int]
-    PB: List[int]
-    PC: List[int]
-    PD: List[int]
-    PE: List[int]
-    PF: List[int]
-    PG: List[int]
-    PH: List[int]
-    PI: List[int]
-    PJ: List[int]
+    PA: list[int]
+    PB: list[int]
+    PC: list[int]
+    PD: list[int]
+    PE: list[int]
+    PF: list[int]
+    PG: list[int]
+    PH: list[int]
+    PI: list[int]
+    PJ: list[int]
 
 
 # endregion
@@ -120,11 +119,11 @@ class randomData:
 
 # region CalcUtils
 class CalcUtils:
-    _primes_cache: Set[int] = set()
+    _primes_cache: set[int] = set()
     _primes_max: int = 0
 
     @staticmethod
-    def get_primes(n: int) -> Set[int]:
+    def get_primes(n: int) -> set[int]:
         """获取小于等于 n 的质数集合（包含1，兼容原逻辑）"""
         if n <= CalcUtils._primes_max:
             return CalcUtils._primes_cache
@@ -147,7 +146,7 @@ class CalcUtils:
 
     @lru_cache(maxsize=128)
     @staticmethod
-    def nwped(numbers_str: str, max_limit: int = 1000) -> Set[int]:
+    def nwped(numbers_str: str, max_limit: int = 1000) -> set[int]:
         """
         数字解析引擎
         :param numbers_str: 输入字符串，如 "range 1,34 --j"
@@ -175,7 +174,7 @@ class CalcUtils:
             elif base_part.startswith("<"):
                 # 处理 "<45" -> 0 到 45
                 val = int(re.search(r"\d+", base_part).group())
-                results = list(range(0, val + 1))
+                results = list(range(val + 1))
 
             elif base_part.startswith(">"):
                 # 处理 ">12" -> 13 到 max_limit
@@ -602,7 +601,7 @@ class filter_for_pabc:
 
 
 # region calculate_lottery
-def calculate_lottery(settings: dict, filters: dict = None) -> Tuple[str, bool]:
+def calculate_lottery(settings: dict, filters: dict = None) -> tuple[str, bool]:
     """
     纯函数，用于单次彩票计算
     直接通过参数获取 settings 和 filters
@@ -628,7 +627,7 @@ def calculate_lottery(settings: dict, filters: dict = None) -> Tuple[str, bool]:
 
 def initialization(
     settings: dict = None, filters: dict = None
-) -> Tuple[randomData, filter_for_pabc]:
+) -> tuple[randomData, filter_for_pabc]:
     """
     初始化 rd 和 ffp
 
@@ -650,7 +649,7 @@ def initialization(
 
 def calculate_lottery_rdffp(
     rd: randomData, ffp: filter_for_pabc = None, status: str = "calculating"
-) -> Tuple[str, bool] | str:
+) -> tuple[str, bool] | str:
     """全新的数据构建器"""
     if not isinstance(rd, randomData):
         return "rd Parameter error"

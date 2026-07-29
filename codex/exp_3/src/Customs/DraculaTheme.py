@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-01-03 04:20:46
 # @Last Modified by:   JogFeelingVI
@@ -94,7 +93,7 @@ def RandColor(mode="def", is_dark_theme=True, hue=None):
 
     # 5. HLS 转换为 RGB
     r, g, b = colorsys.hls_to_rgb(h, brightness, Saturation)
-    hex_color = "#{:02x}{:02x}{:02x}".format(int(r * 255), int(g * 255), int(b * 255))
+    hex_color = f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
     return hex_color
 
 

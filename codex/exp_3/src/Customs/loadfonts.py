@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-02-04 05:32:13
 # @Last Modified by:   JogFeelingVI
@@ -6,7 +5,6 @@
 
 
 import pathlib
-from typing import Dict
 
 # from urllib.parse import unquote
 
@@ -24,8 +22,8 @@ class FontManager:
         self.assets_path = self.__find_assets_dir()
         self.fonts_path = self.assets_path / fonts_subdir
         self.relative_prefix = fonts_subdir
-        self.__font_map: Dict[str, str] = None
-        self.__font_map_abs: Dict[str, str] = None
+        self.__font_map: dict[str, str] = None
+        self.__font_map_abs: dict[str, str] = None
 
     def __find_assets_dir(self):
         """尝试自动获取 assets 目录路径"""
@@ -34,7 +32,7 @@ class FontManager:
         # print(f"debug: {assets_path}")
         return assets_path / "assets"
 
-    def __generate_font_map(self) -> Dict[str, str]:
+    def __generate_font_map(self) -> dict[str, str]:
         fonts = {}
         fonts_abs = {}
         if not self.fonts_path.exists() or not self.fonts_path.is_dir():

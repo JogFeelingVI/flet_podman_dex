@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2025-12-28 00:32:47
 # @Last Modified by:   JogFeelingVI
 # @Last Modified time: 2026-04-16 10:11:33
 
 import flet as ft
+
 from Customs.DraculaTheme import DraculaColors, RandColor
 from Customs.env_manager import env_manager
 from Customs.filter import FilterPage

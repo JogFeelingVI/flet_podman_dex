@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # @Author: JogFeelingVI
 # @Date:   2026-04-22 07:26:08
 # @Last Modified by:   JogFeelingVI
