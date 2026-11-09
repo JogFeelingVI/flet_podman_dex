@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.md
+*.svg
+*.yaml
+*.yml
+Example
+codex
+__pycache__
+*.pyc
+.DS_Store
