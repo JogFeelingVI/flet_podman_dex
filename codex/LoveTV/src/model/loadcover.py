@@ -117,19 +117,23 @@ async def fetch_image_cached(url: str, path: Path, headers) -> bytes:
     return image_bytes
 
 
-async def cacha_cover(cover: str, raw_source: str, raw_id: id) -> str:
+async def cacha_cover(cover: str, raw_source: str, raw_id: id) -> bytes | None:
     """
     缓冲系统图片
     """
-    cache_img = app_cache_path() / f"{raw_source}_{raw_id}.image"
-    if cache_img.is_file():
-        cached_bytes = cache_img.read_bytes()
-        return cached_bytes
-    else:
-        server, cookies = load_auth_config()
-        recover_url = get_image_url_sync(
-            original_url=cover, server=server, cookie=cookies
-        )
-        headers = build_headers(recover_url, server, cookies)
-        cached_bytes = await fetch_image_cached(recover_url, cache_img, headers)
-    return cached_bytes
+    try:
+        cache_img = app_cache_path() / f"{raw_source}_{raw_id}.image"
+        if cache_img.is_file():
+            cached_bytes = cache_img.read_bytes()
+            return cached_bytes
+        else:
+            server, cookies = load_auth_config()
+            recover_url = get_image_url_sync(
+                original_url=cover, server=server, cookie=cookies
+            )
+            headers = build_headers(recover_url, server, cookies)
+            cached_bytes = await fetch_image_cached(recover_url, cache_img, headers)
+            return cached_bytes
+    except httpx.ConnectError:
+        log.info(f"ConnectError: {raw_source}")
+        return None

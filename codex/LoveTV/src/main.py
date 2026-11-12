@@ -24,13 +24,14 @@ async def main(page: ft.Page):
     page.padding = 20
     page.expand = True
 
-    state = {"login_mode": False, "user":""}
+    state = {"login_mode": False, "user": ""}
 
     builders = {
         "/": Player.build,
         "/login": Login.build,
         "/player": Player.build,
         "/author": Author.build,
+        "/connect": Author.build,
     }
 
     state.update(login_state())
@@ -70,10 +71,11 @@ async def main(page: ft.Page):
     page.on_route_change = on_route_change
     page.on_view_pop = on_view_pop
 
-    if state["login_mode"] and state["user"] !="":
+    if state["login_mode"] and state["user"] != "":
         render_route("/player")
     else:
         render_route("/login")
+
 
 if __name__ == "__main__":
     ft.run(main, assets_dir="assets")

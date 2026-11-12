@@ -18,6 +18,7 @@ LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("app.hotmovie")
 
+
 @dataclass
 class QueryParam:
     kind: Literal["movie", "tv"]
@@ -89,11 +90,11 @@ async def fetch_douban_res(
                 "cover": cover,
                 "index": 0,
                 "total_episodes": total_episodes,
-                "playTime": 0,
-                "totalTime": 0,
+                "play_time": 0,
+                "total_time": 0,
                 "saveTime": None,  # 客户端用 System.currentTimeMillis()
-                "searchTitle": title,
-                "doubanId": item_id,
+                "save_time": title,
+                "douban_id": item_id,
                 "rate": rate,
             }
         )

@@ -46,11 +46,11 @@ def login_state() -> dict:
             config = json.load(rfs)
         # 使用 bool() 确保强制转换为布尔类型，同时利用 .get() 防止 Key数量不对或为 None
         login_mode = float(config.get("login_mode"))
-        recode = {"login_mode":isoneweek(login_mode),"user":config.get("username")}
+        recode = {"login_mode": isoneweek(login_mode), "user": config.get("username")}
         return recode
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         log.info(f"ERROR {timestamp()}")
-        return {"login_mode":False,"user":""}
+        return {"login_mode": False, "user": ""}
 
 
 # endregion

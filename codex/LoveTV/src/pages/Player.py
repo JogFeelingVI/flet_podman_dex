@@ -22,15 +22,16 @@ LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("app.Player")
 
+
 def navigation(navigate) -> ft.Control:
     """显示导航栏"""
     nav_items = [
-        kwitem("首页","/author", True),
-        kwitem("电影","/", False),
-        kwitem("剧集","/", False),
-        kwitem("综艺","/", False),
-        kwitem("动漫","/", False),
-        kwitem("直播","/", False),
+        kwitem("首页", "/author", True),
+        kwitem("电影", "/", False),
+        kwitem("剧集", "/", False),
+        kwitem("综艺", "/", False),
+        kwitem("动漫", "/", False),
+        kwitem("直播", "/", False),
     ]
     nvabutton = Father_nav(nav_items, navigate=navigate)
     serchinput = SearchInput()
@@ -65,7 +66,6 @@ def navigation(navigate) -> ft.Control:
     return row
 
 
-
 def build(page: ft.Page, state: dict, navigate) -> ft.View:
     async def open_login():
         await navigate("/login")
@@ -74,11 +74,11 @@ def build(page: ft.Page, state: dict, navigate) -> ft.View:
         await open_login()
 
     navbar = navigation(navigate)
-    playrecord = MainSection("继续观看","playrecords")
+    playrecord = MainSection("继续观看", "playrecords")
     hotmovie = MainSection("Hot Movie", "hotmovie")
     hottv = MainSection("热门剧集", "hottv")
     hottvshow = MainSection("综艺大观", "hottvshow")
-    
+
     player_view = ft.View(
         route="/player",
         controls=[
@@ -99,4 +99,3 @@ def build(page: ft.Page, state: dict, navigate) -> ft.View:
     )
     log.info(f"state is {state}")
     return player_view
-

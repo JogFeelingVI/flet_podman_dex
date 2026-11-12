@@ -16,7 +16,14 @@ log = logging.getLogger("app.IconTextButton")
 
 
 class IconTextButton(ft.Container):
-    def __init__(self, name, icon: ft.IconData = ft.Icons.HISTORY, navigate=None,route=None,  **kwds):
+    def __init__(
+        self,
+        name,
+        icon: ft.IconData = ft.Icons.HISTORY,
+        navigate=None,
+        route=None,
+        **kwds,
+    ):
         self.route = route
         self.navigate = navigate
         self.lable = ft.Text(

@@ -10,7 +10,7 @@ import flet as ft
 def build(page: ft.Page, state: dict, navigate) -> ft.View:
     async def open_player():
         await navigate("/player")
-
+        
     author_view = ft.View(
         route="/author",
         controls=[

@@ -15,17 +15,17 @@ LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("app.PapaChild")
 
+
 @dataclass
 class kwitem:
-    text:str
-    route:str = "/"
-    highlight:bool = False
+    text: str
+    route: str = "/"
+    highlight: bool = False
 
-    
 
 # region 子控件按钮 (建议命名如 NavButton)
 class Son_nav(ft.Container):
-    def __init__(self, item:kwitem, navigate=None, **kwds):
+    def __init__(self, item: kwitem, navigate=None, **kwds):
         self.highlight = item.highlight
         self.route = item.route
         self.navigate = navigate
@@ -102,5 +102,6 @@ class Father_nav(ft.Container):
     def _create_child(self, item: kwitem) -> Son_nav:
         # 支持传入纯字符串或带高亮参数的元组
         return Son_nav(item, self.navigate)
+
 
 # endregion

@@ -58,7 +58,7 @@ def build(page: ft.Page, state: dict, navigate) -> ft.View:
             # 4. 统一处理登录成功逻辑
             if recode and recode.get("response_code") == 200:
                 recode["username"] = username
-                state["login_mode"] = True,
+                state["login_mode"] = (True,)
                 state["user"] = username
                 save_login(recode)
                 await open_player()

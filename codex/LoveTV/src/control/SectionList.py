@@ -32,41 +32,77 @@ log = logging.getLogger("app.SectionList")
 class ChildSection(ft.Container):
     """
     剧集海报墙子项组件
-    dactraw = {'id': '16803', 'source': 'dyttzy', 'title': '怪诞小镇 第一季', 'source_name': '电影天堂资源', 'year': '2012', 'cover': 'https://img.dytt-tupian.com/upload/vod/20250307-1/77a5dccab7bbab580483288307454f9f.jpg', 'index': 7, 'total_episodes': 20, 'play_time': 455, 'total_time': 1377, 'save_time': 1793942030477, 'search_title': '怪诞小镇 第一季'}
+    dictraw 不同版本
+    v1  {'id': '16803', 'source': 'dyttzy', 'title': '怪诞小镇 第一季', 'source_name': '电影天堂资源', 'year': '2012', 'cover': 'https://img.dytt-tupian.com/upload/vod/20250307-1/77a5dccab7bbab580483288307454f9f.jpg', 'index': 7, 'total_episodes': 20, 'play_time': 455, 'total_time': 1377, 'save_time': 1793942030477, 'search_title': '怪诞小镇 第一季'}
+    v2  {'id': '37100984', 'source': 'douban', 'title': '后会友期', 'source_name': None, 'year': '2026', 'cover': 'https://img3.doubanio.com/view/photo/m_ratio_poster/public/p2936933522.jpg', 'index': 0, 'total_episodes': -1, 'playTime': 0, 'totalTime': 0, 'saveTime': None, 'searchTitle': '后会友期', 'doubanId': '37100984', 'rate': '8.7'}
+    v2  {'id': '36847425', 'source': 'douban', 'title': '可能的爱', 'source_name': None, 'year': '2026', 'cover': 'https://img3.doubanio.com/view/photo/m_ratio_poster/public/p2935488630.jpg', 'index': 0, 'total_episodes': -1, 'playTime': 0, 'totalTime': 0, 'saveTime': None, 'searchTitle': '可能的爱', 'doubanId': '36847425', 'rate': '8.7'}
     """
 
-    def __init__(self, dictraw, /, **kwds):
+    def __init__(self, dictraw, ver=1, /, **kwds):
         self.dictraw = dictraw
 
         # 提取数据并设置默认值
-        self.title = dictraw.get("title", "未知剧集")
+        self.id = dictraw.get("id")
+        self.title = dictraw.get("title", "")
         self.cover = dictraw.get("cover", "")
         self.year = dictraw.get("year", "")
         self.source = dictraw.get("source", "")
-        self.id = dictraw.get("id")
 
-        # 进度条计算：已播时间 / 总时间
-        play_time = dictraw.get("play_time", 0)
-        total_time = dictraw.get("total_time", 1)  # 避免除以 0
-        self.progress_value = min(1.0, max(0.0, play_time / total_time))
-
-        # 集数信息拼接
-        total_eps = dictraw.get("total_episodes", 0)
-        self.episode_info = (
-            f"共 {total_eps} 集"
-            if total_eps and total_eps > 0
-            else f"{dictraw.get('rate')}"
-        )
+        self.dictraw_ver = 1
+        if {"douban_id", "rate"}.issubset(dictraw):
+            # log.info("dictraw is v2")
+            self.dictraw = 2
+            self.progress_bar = ft.ProgressBar(visible=False)
+            self.source_name_text = ft.Text("No Display", visible=False)
+            rate = float(_r) if (_r:=dictraw.get("rate")) else -1.0
+            self.right_info = ft.Container(
+                content=ft.Text(f"{rate}", size=11 if rate<7 else 13, color=theme.inverse_surface),
+                bgcolor=theme.secondary_container if rate <7.0 else theme.inverse_primary,
+                padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                border_radius=4,
+                right=6,
+                top=6,
+                visible=rate > 0,
+            )
+            # log.info(f"{self.title} rate {rate}")
+        else:
+            # 这里处理v1的数据结构
+            total_eps = dictraw.get("total_episodes")
+            play_time = dictraw.get("play_time", 0)
+            total_time = dictraw.get("total_time", 1)  # 避免除以 0
+            progress_value = min(1.0, max(0.0, play_time / total_time))
+            self.progress_bar = ft.ProgressBar(
+                value=progress_value,
+                color=theme.on_primary_fixed_variant,
+                bgcolor=ft.Colors.with_opacity(0.3, theme.surface_container_highest),
+                height=3,
+                bottom=0,
+                left=0,
+                right=0,
+                visible=progress_value > 0,
+            )
+            # v1 右上角显示
+            self.right_info = ft.Container(
+                content=ft.Text(f"共 {total_eps} 集", size=11, color=theme.on_primary),
+                bgcolor=theme.primary,
+                padding=ft.Padding.symmetric(horizontal=8, vertical=2),
+                # visible=self.episode_info != "None",
+                border_radius=4,
+                right=6,
+                top=6,
+                visible=total_eps is not None,
+            )
+            source_name = dictraw.get("source_name")
+            self.source_name_text = ft.Text(
+                value=source_name,
+                size=12,
+                max_lines=1,
+                color=theme.on_surface_variant,
+                overflow=ft.TextOverflow.ELLIPSIS,
+            )
 
         # 背景色后备方案
         bg_color = ft.Colors.with_opacity(0.75, theme.surface_container)
-
-        self.source_name = dictraw.get("source_name")
-        if self.source_name == None:
-            rate = float(dictraw.get("rate") or 0)
-            star_count = round(rate / 2)  # 点亮的星星 (0 ~ 5)
-            self.source_name = f"{'★' * star_count}{'☆' * (5 - star_count)}"
-            # self.source_name = "*" * float(dictraw.get("rate", 1))/10
 
         self.cover_img_cache = ft.Image(
             src=self.cover,
@@ -99,27 +135,9 @@ class ChildSection(ft.Container):
                     top=6,
                 ),
                 # 右上角集数标签
-                ft.Container(
-                    content=ft.Text(self.episode_info, size=11, color=theme.on_primary),
-                    bgcolor=ft.Colors.with_opacity(0.85, theme.primary),
-                    padding=ft.Padding.symmetric(horizontal=8, vertical=2),
-                    visible=self.episode_info != "None",
-                    border_radius=4,
-                    right=6,
-                    top=6,
-                ),
+                self.right_info,
                 # 底部播放进度条
-                ft.ProgressBar(
-                    value=self.progress_value,
-                    color=theme.on_primary_fixed_variant,
-                    bgcolor=ft.Colors.with_opacity(
-                        0.3, theme.surface_container_highest
-                    ),
-                    height=3,
-                    bottom=0,
-                    left=0,
-                    right=0,
-                ),
+                self.progress_bar,
             ],
             width=160,
             height=215,
@@ -132,13 +150,6 @@ class ChildSection(ft.Container):
             weight=ft.FontWeight.W_700,
             max_lines=1,
             color=theme.on_surface,
-            overflow=ft.TextOverflow.ELLIPSIS,
-        )
-        self.source_name_text = ft.Text(
-            value=self.source_name,
-            size=12,
-            max_lines=1,
-            color=theme.on_surface_variant,
             overflow=ft.TextOverflow.ELLIPSIS,
         )
 
@@ -164,7 +175,6 @@ class ChildSection(ft.Container):
         super().__init__(
             content=main_layout,
             width=160,
-            height=270,  # 适度增加高度容纳标题
             bgcolor=bg_color,
             border=ft.Border.all(1, theme.surface_bright),
             border_radius=12,
@@ -190,8 +200,10 @@ class ChildSection(ft.Container):
         asyncio.create_task(self.loadcover())
 
     async def loadcover(self):
-        self.cover_img_cache.src = await cacha_cover(self.cover, self.source, self.id)
-        self.cover_img_cache.update()
+        img_bytes = await cacha_cover(self.cover, self.source, self.id)
+        if img_bytes:
+            self.cover_img_cache.src = img_bytes
+            self.cover_img_cache.update()
 
 
 class MainSection(ft.Container):
@@ -263,6 +275,7 @@ class MainSection(ft.Container):
                 # log.info(f"hottv {raw_data[0]}")
             case "hottvshow":
                 raw_data = await fetch_douban_res(hotTvShow)
+                # log.info(f"hottv {raw_data[0]}")
             case _:
                 raw_data = await fetch_douban_res(hotMovie)
         self.list.controls = [ChildSection(x) for x in raw_data]
