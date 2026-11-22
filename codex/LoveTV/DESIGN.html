@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nocturne Romance · 设计系统规范</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --surface: #14121b;
+      --surface-container-lowest: #0f0d16;
+      --surface-container-low: #1c1a24;
+      --surface-container: #211e28;
+      --surface-container-high: #2b2933;
+      --surface-container-highest: #36333e;
+      --on-surface: #e6e0ee;
+      --on-surface-variant: #e5bdc0;
+      --outline: #ac888b;
+      --outline-variant: #5c3f42;
+      --primary: #ffb2ba;
+      --primary-vivid: #FF3366;
+      --secondary: #d0bcff;
+      --secondary-vivid: #8B5CF6;
+      --tertiary: #ffb1c0;
+      --tertiary-vivid: #FF7597;
+      --obsidian: #0D0B14;
+      --glass-bg: rgba(22, 18, 36, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--obsidian);
+      color: var(--on-surface);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(255, 51, 102, 0.14), transparent 40%),
+        radial-gradient(circle at 85% 20%, rgba(139, 92, 246, 0.14), transparent 42%),
+        radial-gradient(circle at 50% 85%, rgba(255, 117, 151, 0.08), transparent 45%),
+        var(--obsidian);
+      min-height: 100vh;
+      padding-bottom: 5rem;
+    }
+
+    /* 顶部毛玻璃导航栏 */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 11, 20, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .navbar-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #FFFFFF;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #FF3366, #8B5CF6);
+      box-shadow: 0 0 16px rgba(255, 51, 102, 0.65);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: #FFFFFF;
+      background: rgba(255, 51, 102, 0.18);
+      border-color: rgba(255, 51, 102, 0.35);
+    }
+
+    /* 主容器 */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 0;
+    }
+
+    /* Hero 头部 */
+    .hero {
+      position: relative;
+      padding: 3rem 2.5rem;
+      border-radius: 1.5rem;
+      background: linear-gradient(135deg, rgba(32, 25, 53, 0.85), rgba(20, 18, 27, 0.92));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+      margin-bottom: 3rem;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 90% 10%, rgba(255, 51, 102, 0.22), transparent 45%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #FFFFFF;
+      background: linear-gradient(90deg, #FF3366, #8B5CF6);
+      padding: 0.35rem 0.9rem;
+      border-radius: 9999px;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(2rem, 4vw, 2.75rem);
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      color: #FFFFFF;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero p {
+      max-width: 720px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 1rem;
+    }
+
+    /* 区块标题 */
+    section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 5rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      letter-spacing: -0.015em;
+    }
+
+    .section-sub {
+      font-size: 0.85rem;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* 颜色色板卡片 */
+    .color-group-title {
+      font-family: 'Sora', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--secondary);
+      margin: 1.75rem 0 0.9rem;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.9rem;
+    }
+
+    .color-card {
+      background: rgba(22, 18, 36, 0.72);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.85rem;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .color-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 51, 102, 0.35);
+    }
+
+    .color-swatch-lg {
+      height: 68px;
+      width: 100%;
+      position: relative;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .color-info {
+      padding: 0.75rem 0.9rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .color-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      word-break: break-all;
+    }
+
+    .color-hex-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .color-hex {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+
+    /* 行内颜色色块标注 */
+    .color-token {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.38rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 0.4rem;
+      padding: 0.08rem 0.45rem 0.08rem 0.25rem;
+      margin: 0 0.15rem;
+      vertical-align: middle;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .color-token:hover {
+      border-color: rgba(255, 51, 102, 0.5);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .color-chip {
+      position: relative;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      overflow: hidden;
+      background-image:
+        linear-gradient(45deg, #444 25%, transparent 25%),
+        linear-gradient(-45deg, #444 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #444 75%),
+        linear-gradient(-45deg, transparent 75%, #444 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+    }
+
+    .color-chip > i {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .color-token code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8em;
+      color: #FFFFFF;
+    }
+
+    /* 排版系统 */
+    .typo-list {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .typo-card {
+      background: rgba(22, 18, 36, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.9rem;
+      padding: 1.1rem 1.35rem;
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 1.25rem;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .typo-card {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+      }
+    }
+
+    .typo-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding-right: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .typo-meta {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-right: 0;
+        padding-bottom: 0.65rem;
+      }
+    }
+
+    .typo-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary);
+    }
+
+    .typo-spec {
+      font-size: 0.76rem;
+      color: rgba(255, 255, 255, 0.62);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+
+    .typo-preview {
+      color: #FFFFFF;
+      overflow-wrap: anywhere;
+    }
+
+    /* 圆角与间距网格 */
+    .token-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 1rem;
+    }
+
+    .token-box {
+      background: rgba(22, 18, 36, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.9rem;
+      padding: 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .radius-demo {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, rgba(255, 51, 102, 0.3), rgba(139, 92, 246, 0.35));
+      border: 2px solid #FF3366;
+    }
+
+    .spacing-bar-wrap {
+      height: 22px;
+      display: flex;
+      align-items: center;
+    }
+
+    .spacing-bar {
+      height: 10px;
+      background: linear-gradient(90deg, #FF3366, #8B5CF6);
+      border-radius: 9999px;
+      box-shadow: 0 0 12px rgba(255, 51, 102, 0.35);
+    }
+
+    .token-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #FFFFFF;
+    }
+
+    .token-val {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      color: rgba(255, 255, 255, 0.68);
+      font-size: 0.8rem;
+    }
+
+    /* 中文说明文档卡片 */
+    .doc-card {
+      background: rgba(22, 18, 36, 0.68);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1.15rem;
+      padding: 1.75rem 2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .doc-card h3 {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .doc-card h4 {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.02rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 1.35rem 0 0.65rem;
+    }
+
+    .doc-card p {
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.95rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .doc-card ul {
+      list-style: none;
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .doc-card li {
+      position: relative;
+      padding-left: 1.2rem;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.94rem;
+    }
+
+    .doc-card li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.62em;
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: #FF3366;
+      box-shadow: 0 0 8px rgba(255, 51, 102, 0.7);
+    }
+
+    .doc-card strong {
+      color: #FFFFFF;
+      font-weight: 600;
+    }
+
+    code.inline-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.84em;
+      background: rgba(139, 92, 246, 0.16);
+      color: #e9ddff;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.35rem;
+      border: 1px solid rgba(139, 92, 246, 0.28);
+    }
+
+    /* 组件实时预览条 */
+    .demo-strip {
+      margin-top: 1.25rem;
+      padding: 1.25rem;
+      border-radius: 1rem;
+      background: rgba(13, 11, 20, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-primary-demo {
+      border: none;
+      border-radius: 9999px;
+      background: #FF3366;
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.65rem 1.4rem;
+      box-shadow: 0 8px 24px rgba(255, 51, 102, 0.35);
+      cursor: pointer;
+    }
+
+    .btn-secondary-demo {
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #FFFFFF;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.65rem 1.4rem;
+      cursor: pointer;
+    }
+
+    .chip-active-demo {
+      height: 32px;
+      padding: 0 1rem;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, #FF3366, #8B5CF6);
+      color: #FFFFFF;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .chip-inactive-demo {
+      height: 32px;
+      padding: 0 1rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .toggle-demo {
+      width: 48px;
+      height: 28px;
+      border-radius: 9999px;
+      background: #FF3366;
+      padding: 3px;
+      display: inline-flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .toggle-demo span {
+      width: 22px;
+      height: 22px;
+      border-radius: 9999px;
+      background: #FFFFFF;
+    }
+
+    /* 复制提示 Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: rgba(32, 25, 53, 0.95);
+      border: 1px solid rgba(255, 51, 102, 0.45);
+      color: #FFFFFF;
+      padding: 0.6rem 1.1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      z-index: 999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部导航 -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>Nocturne Romance · 设计系统</span>
+      </div>
+      <div class="nav-links">
+        <a href="#tokens-colors">色彩令牌</a>
+        <a href="#tokens-typography">排版字体</a>
+        <a href="#tokens-shapes">圆角与间距</a>
+        <a href="#guide-brand">品牌与风格</a>
+        <a href="#guide-colors">色彩说明</a>
+        <a href="#guide-layout">布局与深度</a>
+        <a href="#guide-components">组件规范</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Hero -->
+    <header class="hero">
+      <div class="hero-badge">Design System Specification</div>
+      <h1>Nocturne Romance 设计系统</h1>
+      <p>面向高端浪漫叙事与流媒体娱乐的暗黑电影感设计语言。以下完整呈现所有设计令牌（Color Tokens / Typography / Rounded / Spacing）及中文译注规范，所有颜色代码均已标注可视化色块，点击色值即可复制。</p>
+    </header>
+
+    <!-- 1. 色彩令牌 (Frontmatter Colors) -->
+    <section id="tokens-colors">
+      <div class="section-header">
+        <h2 class="section-title">色彩令牌（Color Tokens）</h2>
+        <span class="section-sub">共 47 个基础令牌 · 点击色值可复制</span>
+      </div>
+
+      <div class="color-group-title">表面与背景色（Surface &amp; Background）</div>
+      <div class="color-grid">
+        <div class="color-card"><div class="color-swatch-lg" style="background:#14121b"></div><div class="color-info"><span class="color-name">surface</span><div class="color-hex-row"><span class="color-hex" data-copy="#14121b">#14121b</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#14121b"></div><div class="color-info"><span class="color-name">surface-dim</span><div class="color-hex-row"><span class="color-hex" data-copy="#14121b">#14121b</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#3b3842"></div><div class="color-info"><span class="color-name">surface-bright</span><div class="color-hex-row"><span class="color-hex" data-copy="#3b3842">#3b3842</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#0f0d16"></div><div class="color-info"><span class="color-name">surface-container-lowest</span><div class="color-hex-row"><span class="color-hex" data-copy="#0f0d16">#0f0d16</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#1c1a24"></div><div class="color-info"><span class="color-name">surface-container-low</span><div class="color-hex-row"><span class="color-hex" data-copy="#1c1a24">#1c1a24</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#211e28"></div><div class="color-info"><span class="color-name">surface-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#211e28">#211e28</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#2b2933"></div><div class="color-info"><span class="color-name">surface-container-high</span><div class="color-hex-row"><span class="color-hex" data-copy="#2b2933">#2b2933</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#36333e"></div><div class="color-info"><span class="color-name">surface-container-highest</span><div class="color-hex-row"><span class="color-hex" data-copy="#36333e">#36333e</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#14121b"></div><div class="color-info"><span class="color-name">background</span><div class="color-hex-row"><span class="color-hex" data-copy="#14121b">#14121b</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e6e0ee"></div><div class="color-info"><span class="color-name">on-background</span><div class="color-hex-row"><span class="color-hex" data-copy="#e6e0ee">#e6e0ee</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#36333e"></div><div class="color-info"><span class="color-name">surface-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#36333e">#36333e</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e6e0ee"></div><div class="color-info"><span class="color-name">on-surface</span><div class="color-hex-row"><span class="color-hex" data-copy="#e6e0ee">#e6e0ee</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e5bdc0"></div><div class="color-info"><span class="color-name">on-surface-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#e5bdc0">#e5bdc0</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e6e0ee"></div><div class="color-info"><span class="color-name">inverse-surface</span><div class="color-hex-row"><span class="color-hex" data-copy="#e6e0ee">#e6e0ee</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#322f39"></div><div class="color-info"><span class="color-name">inverse-on-surface</span><div class="color-hex-row"><span class="color-hex" data-copy="#322f39">#322f39</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ac888b"></div><div class="color-info"><span class="color-name">outline</span><div class="color-hex-row"><span class="color-hex" data-copy="#ac888b">#ac888b</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#5c3f42"></div><div class="color-info"><span class="color-name">outline-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#5c3f42">#5c3f42</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb2ba"></div><div class="color-info"><span class="color-name">surface-tint</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb2ba">#ffb2ba</span></div></div></div>
+      </div>
+
+      <div class="color-group-title">主色、辅助色与第三色（Primary / Secondary / Tertiary）</div>
+      <div class="color-grid">
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb2ba"></div><div class="color-info"><span class="color-name">primary</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb2ba">#ffb2ba</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#670020"></div><div class="color-info"><span class="color-name">on-primary</span><div class="color-hex-row"><span class="color-hex" data-copy="#670020">#670020</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ff4f73"></div><div class="color-info"><span class="color-name">primary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#ff4f73">#ff4f73</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#5a001b"></div><div class="color-info"><span class="color-name">on-primary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#5a001b">#5a001b</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#bd0042"></div><div class="color-info"><span class="color-name">inverse-primary</span><div class="color-hex-row"><span class="color-hex" data-copy="#bd0042">#bd0042</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#d0bcff"></div><div class="color-info"><span class="color-name">secondary</span><div class="color-hex-row"><span class="color-hex" data-copy="#d0bcff">#d0bcff</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#3c0091"></div><div class="color-info"><span class="color-name">on-secondary</span><div class="color-hex-row"><span class="color-hex" data-copy="#3c0091">#3c0091</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#571bc1"></div><div class="color-info"><span class="color-name">secondary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#571bc1">#571bc1</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#c4abff"></div><div class="color-info"><span class="color-name">on-secondary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#c4abff">#c4abff</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb1c0"></div><div class="color-info"><span class="color-name">tertiary</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb1c0">#ffb1c0</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#660029"></div><div class="color-info"><span class="color-name">on-tertiary</span><div class="color-hex-row"><span class="color-hex" data-copy="#660029">#660029</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e96486"></div><div class="color-info"><span class="color-name">tertiary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#e96486">#e96486</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#5a0023"></div><div class="color-info"><span class="color-name">on-tertiary-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#5a0023">#5a0023</span></div></div></div>
+      </div>
+
+      <div class="color-group-title">错误状态与固定色阶（Error &amp; Fixed Tones）</div>
+      <div class="color-grid">
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb4ab"></div><div class="color-info"><span class="color-name">error</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb4ab">#ffb4ab</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#690005"></div><div class="color-info"><span class="color-name">on-error</span><div class="color-hex-row"><span class="color-hex" data-copy="#690005">#690005</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#93000a"></div><div class="color-info"><span class="color-name">error-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#93000a">#93000a</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffdad6"></div><div class="color-info"><span class="color-name">on-error-container</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffdad6">#ffdad6</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffd9dc"></div><div class="color-info"><span class="color-name">primary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffd9dc">#ffd9dc</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb2ba"></div><div class="color-info"><span class="color-name">primary-fixed-dim</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb2ba">#ffb2ba</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#400011"></div><div class="color-info"><span class="color-name">on-primary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#400011">#400011</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#910030"></div><div class="color-info"><span class="color-name">on-primary-fixed-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#910030">#910030</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#e9ddff"></div><div class="color-info"><span class="color-name">secondary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#e9ddff">#e9ddff</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#d0bcff"></div><div class="color-info"><span class="color-name">secondary-fixed-dim</span><div class="color-hex-row"><span class="color-hex" data-copy="#d0bcff">#d0bcff</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#23005c"></div><div class="color-info"><span class="color-name">on-secondary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#23005c">#23005c</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#5516be"></div><div class="color-info"><span class="color-name">on-secondary-fixed-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#5516be">#5516be</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffd9df"></div><div class="color-info"><span class="color-name">tertiary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffd9df">#ffd9df</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#ffb1c0"></div><div class="color-info"><span class="color-name">tertiary-fixed-dim</span><div class="color-hex-row"><span class="color-hex" data-copy="#ffb1c0">#ffb1c0</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#3f0016"></div><div class="color-info"><span class="color-name">on-tertiary-fixed</span><div class="color-hex-row"><span class="color-hex" data-copy="#3f0016">#3f0016</span></div></div></div>
+        <div class="color-card"><div class="color-swatch-lg" style="background:#88183e"></div><div class="color-info"><span class="color-name">on-tertiary-fixed-variant</span><div class="color-hex-row"><span class="color-hex" data-copy="#88183e">#88183e</span></div></div></div>
+      </div>
+    </section>
+
+    <!-- 2. 排版令牌 (Typography) -->
+    <section id="tokens-typography">
+      <div class="section-header">
+        <h2 class="section-title">排版令牌（Typography Tokens）</h2>
+        <span class="section-sub">Sora &amp; Plus Jakarta Sans</span>
+      </div>
+      <div class="typo-list">
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">headline-xl</span><span class="typo-spec">Sora · 40px / 48px · 700 · -0.02em</span></div>
+          <div class="typo-preview" style="font-family:'Sora',sans-serif;font-size:40px;font-weight:700;line-height:48px;letter-spacing:-0.02em;">Midnight Romance 午夜浪漫</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">headline-xl-mobile</span><span class="typo-spec">Sora · 30px / 36px · 700 · -0.015em</span></div>
+          <div class="typo-preview" style="font-family:'Sora',sans-serif;font-size:30px;font-weight:700;line-height:36px;letter-spacing:-0.015em;">Midnight Romance 午夜浪漫</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">headline-lg</span><span class="typo-spec">Sora · 32px / 40px · 600 · -0.015em</span></div>
+          <div class="typo-preview" style="font-family:'Sora',sans-serif;font-size:32px;font-weight:600;line-height:40px;letter-spacing:-0.015em;">Intimate Cinema 沉浸影院</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">headline-lg-mobile</span><span class="typo-spec">Sora · 24px / 32px · 600 · -0.01em</span></div>
+          <div class="typo-preview" style="font-family:'Sora',sans-serif;font-size:24px;font-weight:600;line-height:32px;letter-spacing:-0.01em;">Intimate Cinema 沉浸影院</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">headline-md</span><span class="typo-spec">Sora · 20px / 28px · 600 · -0.01em</span></div>
+          <div class="typo-preview" style="font-family:'Sora',sans-serif;font-size:20px;font-weight:600;line-height:28px;letter-spacing:-0.01em;">Episode Premiere 首播剧集</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">title-lg</span><span class="typo-spec">Plus Jakarta Sans · 18px / 26px · 600</span></div>
+          <div class="typo-preview" style="font-size:18px;font-weight:600;line-height:26px;">Sensory Glassmorphism 感官玻璃拟态</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">title-md</span><span class="typo-spec">Plus Jakarta Sans · 16px / 24px · 600</span></div>
+          <div class="typo-preview" style="font-size:16px;font-weight:600;line-height:24px;">Season 1 · Episode 04 第一季第四集</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">body-lg</span><span class="typo-spec">Plus Jakarta Sans · 16px / 24px · 400</span></div>
+          <div class="typo-preview" style="font-size:16px;font-weight:400;line-height:24px;">Deep obsidian canvases recede into the distance, letting romantic narratives shine.</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">body-md</span><span class="typo-spec">Plus Jakarta Sans · 14px / 20px · 400</span></div>
+          <div class="typo-preview" style="font-size:14px;font-weight:400;line-height:20px;">Standard episode synopsis and cast directory body copy without visual fatigue.</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">body-sm</span><span class="typo-spec">Plus Jakarta Sans · 12px / 18px · 400</span></div>
+          <div class="typo-preview" style="font-size:12px;font-weight:400;line-height:18px;">Auxiliary captions, timestamps, and subtle metadata annotations.</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">label-lg</span><span class="typo-spec">Plus Jakarta Sans · 14px / 20px · 600 · 0.01em</span></div>
+          <div class="typo-preview" style="font-size:14px;font-weight:600;line-height:20px;letter-spacing:0.01em;">WATCH NOW · 立即观看</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">label-md</span><span class="typo-spec">Plus Jakarta Sans · 12px / 16px · 600 · 0.02em</span></div>
+          <div class="typo-preview" style="font-size:12px;font-weight:600;line-height:16px;letter-spacing:0.02em;">ROM-COM · SLOW BURN</div>
+        </div>
+        <div class="typo-card">
+          <div class="typo-meta"><span class="typo-name">label-sm</span><span class="typo-spec">Plus Jakarta Sans · 10px / 14px · 700 · 0.04em</span></div>
+          <div class="typo-preview" style="font-size:10px;font-weight:700;line-height:14px;letter-spacing:0.04em;text-transform:uppercase;">4K ULTRA HD · TOP 10</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 圆角与间距令牌 (Rounded & Spacing) -->
+    <section id="tokens-shapes">
+      <div class="section-header">
+        <h2 class="section-title">圆角与间距令牌（Rounded &amp; Spacing）</h2>
+        <span class="section-sub">几何规范与布局基准</span>
+      </div>
+
+      <div class="color-group-title">圆角令牌（Rounded）</div>
+      <div class="token-grid">
+        <div class="token-box"><div class="radius-demo" style="border-radius:0.25rem"></div><div class="token-label"><span>sm</span><span class="token-val">0.25rem (4px)</span></div></div>
+        <div class="token-box"><div class="radius-demo" style="border-radius:0.5rem"></div><div class="token-label"><span>DEFAULT</span><span class="token-val">0.5rem (8px)</span></div></div>
+        <div class="token-box"><div class="radius-demo" style="border-radius:0.75rem"></div><div class="token-label"><span>md</span><span class="token-val">0.75rem (12px)</span></div></div>
+        <div class="token-box"><div class="radius-demo" style="border-radius:1rem"></div><div class="token-label"><span>lg</span><span class="token-val">1rem (16px)</span></div></div>
+        <div class="token-box"><div class="radius-demo" style="border-radius:1.5rem"></div><div class="token-label"><span>xl</span><span class="token-val">1.5rem (24px)</span></div></div>
+        <div class="token-box"><div class="radius-demo" style="border-radius:9999px"></div><div class="token-label"><span>full</span><span class="token-val">9999px</span></div></div>
+      </div>
+
+      <div class="color-group-title">间距令牌（Spacing）</div>
+      <div class="token-grid">
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:4px"></div></div><div class="token-label"><span>space-xs</span><span class="token-val">0.25rem (4px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:8px"></div></div><div class="token-label"><span>space-sm</span><span class="token-val">0.5rem (8px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:16px"></div></div><div class="token-label"><span>space-md</span><span class="token-val">1rem (16px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:24px"></div></div><div class="token-label"><span>space-lg</span><span class="token-val">1.5rem (24px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:32px"></div></div><div class="token-label"><span>space-xl</span><span class="token-val">2rem (32px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:12px"></div></div><div class="token-label"><span>gutter-sm</span><span class="token-val">0.75rem (12px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:16px"></div></div><div class="token-label"><span>gutter</span><span class="token-val">1rem (16px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:24px"></div></div><div class="token-label"><span>gutter-lg</span><span class="token-val">1.5rem (24px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:16px"></div></div><div class="token-label"><span>margin</span><span class="token-val">1rem (16px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:24px"></div></div><div class="token-label"><span>margin-tablet</span><span class="token-val">1.5rem (24px)</span></div></div>
+        <div class="token-box"><div class="spacing-bar-wrap"><div class="spacing-bar" style="width:40px"></div></div><div class="token-label"><span>margin-desktop</span><span class="token-val">2.5rem (40px)</span></div></div>
+      </div>
+    </section>
+
+    <!-- 4. 中文翻译说明文档 -->
+    <section id="guide-brand">
+      <div class="section-header">
+        <h2 class="section-title">设计系统说明（中文译注）</h2>
+        <span class="section-sub">品牌、色彩、排版、布局、深度与组件规范</span>
+      </div>
+
+      <!-- 品牌与风格 -->
+      <article class="doc-card">
+        <h3>品牌与风格（Brand &amp; Style）</h3>
+        <p>本设计系统旨在为高端浪漫叙事与流媒体娱乐打造私密、极具电影感的沉浸氛围。视觉识别体系将午夜影院空间的奢华感与浪漫戏剧的炽热温度相融合，唤起观众的好奇心、情感共鸣与逃离现实的沉浸体验。</p>
+        <p>设计风格结合了<strong>暗黑影院人体工学（Dark Cinema Ergonomics）</strong>与<strong>感官玻璃拟态（Sensory Glassmorphism）</strong>：</p>
+        <ul>
+          <li><strong>氛围纵深感：</strong>深邃的黑曜石与午夜紫罗兰画布向后退隐，使丰富的视频主视觉与浪漫剧情成为舞台中央的焦点。</li>
+          <li><strong>微光半透明质感：</strong>带有细腻内描边的磨砂玻璃表面能够漫反射底层画面，营造出天鹅绒般的夜色纹理与电影光影溢出效果。</li>
+          <li><strong>电光激情：</strong>充满活力的玫瑰珊瑚红强调色作为视觉信标，在不造成视觉疲劳的前提下迅速激发情感参与感。</li>
+          <li><strong>精致现代感：</strong>精准且高可读性的几何字体赋予界面高级的杂志编辑质感，完美契合精品剧情片、恋爱真人秀与剧集内容。</li>
+        </ul>
+      </article>
+
+      <!-- 色彩系统 -->
+      <article class="doc-card" id="guide-colors">
+        <h3>色彩系统（Colors）</h3>
+        <p>整套调色板专为暗光环境下的沉浸式观影消费而校准，优先兼顾 OLED 屏幕节能表现以及视频缩略图与海报的高动态对比度。</p>
+
+        <h4>调色板架构</h4>
+        <ul>
+          <li><strong>主色 Primary（<span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span> - 鲜艳玫瑰珊瑚红）：</strong>代表渴望、情感与核心操作。严格限定用于首屏主行动按钮（CTA）、播放进度条滑块、匹配度百分比以及关键交互的激活状态。</li>
+          <li><strong>辅助色 Secondary（<span class="color-token" data-copy="#8B5CF6"><span class="color-chip"><i style="background:#8B5CF6"></i></span><code>#8B5CF6</code></span> - 柔光紫罗兰）：</strong>传递午夜神秘与魅惑气息。应用于细腻的线性渐变叠加层、会员尊享徽章以及次级高亮状态。</li>
+          <li><strong>第三色 Tertiary（<span class="color-token" data-copy="#FF7597"><span class="color-chip"><i style="background:#FF7597"></i></span><code>#FF7597</code></span> - 绯红兰花）：</strong>用于微交互、收藏/点赞切换按钮以及精致的浪漫标签元素。</li>
+          <li><strong>中性基准色 Neutral Base（<span class="color-token" data-copy="#0D0B14"><span class="color-chip"><i style="background:#0D0B14"></i></span><code>#0D0B14</code></span> - 午夜黑曜石）：</strong>深沉的根画布底色，可吸收多余的屏幕眩光，并与明亮的视频画面形成近乎无限的对比度。</li>
+        </ul>
+
+        <h4>表面系统</h4>
+        <ul>
+          <li><strong>基础画布（Base Canvas）：</strong><span class="color-token" data-copy="#0D0B14"><span class="color-chip"><i style="background:#0D0B14"></i></span><code>#0D0B14</code></span></li>
+          <li><strong>表面层级 1（卡片/表单页）：</strong><span class="color-token" data-copy="#161224"><span class="color-chip"><i style="background:#161224"></i></span><code>#161224</code></span>（当搭配背景模糊效果时使用 <span class="color-token" data-copy="rgba(22, 18, 36, 0.72)"><span class="color-chip"><i style="background:rgba(22, 18, 36, 0.72)"></i></span><code>rgba(22, 18, 36, 0.72)</code></span>）</li>
+          <li><strong>表面层级 2（悬浮弹窗/导航栏）：</strong><span class="color-token" data-copy="rgba(32, 25, 53, 0.85)"><span class="color-chip"><i style="background:rgba(32, 25, 53, 0.85)"></i></span><code>rgba(32, 25, 53, 0.85)</code></span></li>
+          <li><strong>玻璃边框描边（Glass Border Stroke）：</strong>常规态为 <span class="color-token" data-copy="rgba(255, 255, 255, 0.08)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.08)"></i></span><code>rgba(255, 255, 255, 0.08)</code></span>，激活状态过渡至 <span class="color-token" data-copy="rgba(255, 51, 102, 0.20)"><span class="color-chip"><i style="background:rgba(255, 51, 102, 0.20)"></i></span><code>rgba(255, 51, 102, 0.20)</code></span></li>
+          <li><strong>文本与前景色（Text &amp; Foreground）：</strong>
+            高对比度（主标题与正文）：<span class="color-token" data-copy="#FFFFFF"><span class="color-chip"><i style="background:#FFFFFF"></i></span><code>#FFFFFF</code></span>；
+            中对比度（副文本与元信息）：<span class="color-token" data-copy="rgba(255, 255, 255, 0.70)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.70)"></i></span><code>rgba(255, 255, 255, 0.70)</code></span>；
+            低对比度（分割线与未激活项）：<span class="color-token" data-copy="rgba(255, 255, 255, 0.38)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.38)"></i></span><code>rgba(255, 255, 255, 0.38)</code></span>
+          </li>
+        </ul>
+      </article>
+
+      <!-- 排版字体 -->
+      <article class="doc-card">
+        <h3>排版字体（Typography）</h3>
+        <p>字体搭配将 <strong>Sora</strong> 与 <strong>Plus Jakarta Sans</strong> 结合在一起，在杂志级浪漫质感与轻松的移动端可读性之间取得平衡。</p>
+        <ul>
+          <li><strong>标题层级（Sora）：</strong>Sora 兼具几何感与流畅的曲线个性，为剧集标题、首屏海报大字与页面标题注入现代科技感的浪漫气息。其开放的字怀（Aperture）在多样的背景图像上依然保持清晰辨识度。</li>
+          <li><strong>内容层级（Plus Jakarta Sans）：</strong>温润、柔和且均衡，Plus Jakarta Sans 负责承载剧集简介、演职员表、元标签与交互文案，在长时间夜间阅读时不易产生视觉疲劳。</li>
+          <li><strong>对比度与可读性指南：</strong>所有覆盖在媒体背景上的正文文本必须配以定向暗角渐变遮罩（从 <span class="color-token" data-copy="rgba(13, 11, 20, 0.90)"><span class="color-chip"><i style="background:rgba(13, 11, 20, 0.90)"></i></span><code>rgba(13, 11, 20, 0.90)</code></span> 渐变至 <code class="inline-code">transparent</code>）。小号标签（如“4K Ultra HD”、“Season 1”或“Top 10”）必须使用 <code class="inline-code">label-sm</code> 规范，采用全大写字母并将字距设为 <code class="inline-code">0.04em</code>，以确保在所有屏幕像素密度下均清晰锐利。</li>
+        </ul>
+      </article>
+
+      <!-- 布局与间距 -->
+      <article class="doc-card" id="guide-layout">
+        <h3>布局与间距（Layout &amp; Spacing）</h3>
+        <p>整体布局遵循移动端优先的流式架构，围绕贴边媒体卡片、横向轮播列表以及拇指热区持久导航栏构建。</p>
+
+        <h4>移动端网格与轮播</h4>
+        <ul>
+          <li><strong>移动端（&lt; 768px）：</strong>4 列网格布局，屏幕外边距为 <code class="inline-code">1rem</code>，列间距（Gutter）为 <code class="inline-code">0.75rem</code>。横向轮播打破画布边界，延伸至屏幕边缘，并保留 <code class="inline-code">1rem</code> 的尾部吸附偏移，以露出即将滑入的后续内容。</li>
+          <li><strong>平板端（768px - 1024px）：</strong>8 列网格布局，外边距 <code class="inline-code">1.5rem</code>，列间距 <code class="inline-code">1rem</code>。海报网格每行自适应展示 3–4 个条目。</li>
+          <li><strong>桌面端 / 大屏平板横屏（&gt; 1024px）：</strong>12 列网格布局，外边距 <code class="inline-code">2.5rem</code>，列间距 <code class="inline-code">1.5rem</code>。内容容器最大宽度限制为 <code class="inline-code">1440px</code>。</li>
+        </ul>
+
+        <h4>间距节奏</h4>
+        <ul>
+          <li>使用 <code class="inline-code">space-xs</code>（4px）与 <code class="inline-code">space-sm</code>（8px）处理紧密关联的元数据标签、星级评分以及徽章内边距。</li>
+          <li>使用 <code class="inline-code">space-md</code>（16px）作为标准组件内部填充以及垂直堆叠表单元素的间距。</li>
+          <li>使用 <code class="inline-code">space-lg</code>（24px）分隔不同的轮播行与模块化卡片区块。</li>
+          <li>使用 <code class="inline-code">space-xl</code>（32px）作为主要垂直区块分隔与模态框顶部内边距。</li>
+        </ul>
+      </article>
+
+      <!-- 海拔高度与深度 -->
+      <article class="doc-card">
+        <h3>海拔高度与深度（Elevation &amp; Depth）</h3>
+        <p>界面纵深感并非通过传统的纯黑投影实现，而是借助半透明大气层、磨砂玻璃背景以及彩色光晕来构建。</p>
+
+        <h4>玻璃拟态与模糊令牌</h4>
+        <ul>
+          <li><strong>环境磨砂玻璃（Ambient Frosted Glass）：</strong>背景填充 <span class="color-token" data-copy="rgba(22, 18, 36, 0.65)"><span class="color-chip"><i style="background:rgba(22, 18, 36, 0.65)"></i></span><code>rgba(22, 18, 36, 0.65)</code></span>，叠加 <code class="inline-code">backdrop-filter: blur(16px)</code> 以及一条连续的 <span class="color-token" data-copy="rgba(255, 255, 255, 0.08)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.08)"></i></span><code>rgba(255, 255, 255, 0.08)</code></span> 发丝级细边框。</li>
+          <li><strong>浮起玻璃（浮层与抽屉 Raised Glass）：</strong>背景填充 <span class="color-token" data-copy="rgba(32, 25, 53, 0.85)"><span class="color-chip"><i style="background:rgba(32, 25, 53, 0.85)"></i></span><code>rgba(32, 25, 53, 0.85)</code></span>，配合 <code class="inline-code">backdrop-filter: blur(24px)</code> 及柔和的顶部定向高光描边（<code class="inline-code">border-top: 1px solid</code> <span class="color-token" data-copy="rgba(255, 255, 255, 0.15)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.15)"></i></span><code>rgba(255, 255, 255, 0.15)</code></span>）。</li>
+        </ul>
+
+        <h4>发光效果</h4>
+        <ul>
+          <li><strong>主操作光晕（Primary Action Glow）：</strong>在首屏主按钮及播放触发器上投射带有主色调的环境投影：<code class="inline-code">0px 8px 24px</code> <span class="color-token" data-copy="rgba(255, 51, 102, 0.35)"><span class="color-chip"><i style="background:rgba(255, 51, 102, 0.35)"></i></span><code>rgba(255, 51, 102, 0.35)</code></span>。</li>
+          <li><strong>紫罗兰环境光环（Violet Ambient Halos）：</strong>选中的视频卡片与激活状态的标签图标会散发柔和的紫罗兰光晕：<code class="inline-code">0px 4px 20px</code> <span class="color-token" data-copy="rgba(139, 92, 246, 0.25)"><span class="color-chip"><i style="background:rgba(139, 92, 246, 0.25)"></i></span><code>rgba(139, 92, 246, 0.25)</code></span>。</li>
+          <li><strong>底部导航坞（Bottom Navigation Dock）：</strong>采用常驻浮起磨砂层（<span class="color-token" data-copy="rgba(13, 11, 20, 0.88)"><span class="color-chip"><i style="background:rgba(13, 11, 20, 0.88)"></i></span><code>rgba(13, 11, 20, 0.88)</code></span> 搭配 <code class="inline-code">blur(20px)</code>），使下方滚动的内容产生细腻的溶解过渡。</li>
+        </ul>
+      </article>
+
+      <!-- 形状规范 -->
+      <article class="doc-card">
+        <h3>形状规范（Shapes）</h3>
+        <p>形状语言采用 <code class="inline-code">roundedness: 2</code>（基准圆角为 <code class="inline-code">0.5rem</code> / 8px），确立精致、现代且兼具亲和力与触控人体工学的轮廓形态。</p>
+        <ul>
+          <li><strong>海报与视频卡片：</strong>采用 12px（<code class="inline-code">0.75rem</code>）至 16px（<code class="inline-code">1rem</code>）圆角，在柔化边缘张力的同时保留矩形电影画幅感。</li>
+          <li><strong>按钮与交互标签：</strong>胶囊轮廓（<code class="inline-code">9999px</code> 圆角）专用于主操作按钮、分类筛选芯片以及直播状态徽章，确保快速识别点击热区。</li>
+          <li><strong>模态框与底部抽屉：</strong>顶部两侧采用 24px（<code class="inline-code">1.5rem</code>）圆角，在移动端界面中呈现如幕布般自然拉起的视觉效果。</li>
+        </ul>
+      </article>
+
+      <!-- 组件规范 -->
+      <article class="doc-card" id="guide-components">
+        <h3>组件规范（Components）</h3>
+
+        <h4>按钮（Buttons）</h4>
+        <ul>
+          <li><strong>主按钮（如“立即观看 Watch Now”、“继续播放 Resume”）：</strong>全胶囊形（<code class="inline-code">rounded-full</code>），实心 <span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span> 背景，<span class="color-token" data-copy="#FFFFFF"><span class="color-chip"><i style="background:#FFFFFF"></i></span><code>#FFFFFF</code></span> 粗体文字（<code class="inline-code">label-lg</code>），搭配 <code class="inline-code">box-shadow: 0 8px 24px</code> <span class="color-token" data-copy="rgba(255, 51, 102, 0.35)"><span class="color-chip"><i style="background:rgba(255, 51, 102, 0.35)"></i></span><code>rgba(255, 51, 102, 0.35)</code></span>。按压态不透明度降至 0.9 并缩放至 <code class="inline-code">0.98</code>。</li>
+          <li><strong>次按钮（如“预告片 Trailer”、“详情 Details”）：</strong>磨砂玻璃胶囊按钮，填充 <span class="color-token" data-copy="rgba(255, 255, 255, 0.08)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.08)"></i></span><code>rgba(255, 255, 255, 0.08)</code></span>，边框 <code class="inline-code">1px solid</code> <span class="color-token" data-copy="rgba(255, 255, 255, 0.18)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.18)"></i></span><code>rgba(255, 255, 255, 0.18)</code></span>，<span class="color-token" data-copy="#FFFFFF"><span class="color-chip"><i style="background:#FFFFFF"></i></span><code>#FFFFFF</code></span> 文字。点击时表面提亮至 <span class="color-token" data-copy="rgba(255, 255, 255, 0.16)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.16)"></i></span><code>rgba(255, 255, 255, 0.16)</code></span>。</li>
+          <li><strong>图标操作按钮（点赞、加入片单、分享）：</strong>44×44px 圆形玻璃按钮（<code class="inline-code">rounded-full</code>），内置居中单色图标；激活切换后图标变为 <span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span>。</li>
+        </ul>
+
+        <h4>视频海报与横幅卡片（Video Poster &amp; Banner Cards）</h4>
+        <ul>
+          <li><strong>标准剧集/节目卡片：</strong>宽高比 2:3（竖版海报）或 16:9（剧集缩略图）。具备 12px 圆角、高密度封面图，以及自底部 <span class="color-token" data-copy="rgba(13, 11, 20, 0.85)"><span class="color-chip"><i style="background:rgba(13, 11, 20, 0.85)"></i></span><code>rgba(13, 11, 20, 0.85)</code></span> 向顶部 <code class="inline-code">transparent</code> 过渡的线性渐变阴影，用于承托片名与匹配度元数据。</li>
+          <li><strong>玻璃元数据卡片（Glass Metadata Card）：</strong>叠加在画面上的玻璃容器，8px 圆角，填充 <span class="color-token" data-copy="rgba(22, 18, 36, 0.70)"><span class="color-chip"><i style="background:rgba(22, 18, 36, 0.70)"></i></span><code>rgba(22, 18, 36, 0.70)</code></span>，用于展示单集时长与播放进度条。</li>
+          <li><strong>进度条（Progress Bar）：</strong>4px 高度轨道，底轨颜色为 <span class="color-token" data-copy="rgba(255, 255, 255, 0.20)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.20)"></i></span><code>rgba(255, 255, 255, 0.20)</code></span>，已播放进度条填充 <span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span> 并附带微弱发光。</li>
+        </ul>
+
+        <h4>筛选标签（Chips &amp; Filter Tags）</h4>
+        <ul>
+          <li><strong>分类筛选标签（如“慢热 Slow Burn”、“韩剧 K-Drama”、“浪漫喜剧 Rom-Com”）：</strong>32px 高度，胶囊形状。未激活态：背景 <span class="color-token" data-copy="rgba(255, 255, 255, 0.06)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.06)"></i></span><code>rgba(255, 255, 255, 0.06)</code></span>，文字 <span class="color-token" data-copy="rgba(255, 255, 255, 0.7)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.7)"></i></span><code>rgba(255, 255, 255, 0.7)</code></span>。激活态：由 <span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span> 至 <span class="color-token" data-copy="#8B5CF6"><span class="color-chip"><i style="background:#8B5CF6"></i></span><code>#8B5CF6</code></span> 的线性渐变背景，配 <span class="color-token" data-copy="#FFFFFF"><span class="color-chip"><i style="background:#FFFFFF"></i></span><code>#FFFFFF</code></span> 文字且无外边框。</li>
+        </ul>
+
+        <h4>输入框与搜索栏（Input Fields &amp; Search Bars）</h4>
+        <ul>
+          <li><strong>搜索栏（Search Bar）：</strong>48px 高度，16px 圆角，背景 <span class="color-token" data-copy="rgba(22, 18, 36, 0.80)"><span class="color-chip"><i style="background:rgba(22, 18, 36, 0.80)"></i></span><code>rgba(22, 18, 36, 0.80)</code></span>，1px 边框 <span class="color-token" data-copy="rgba(255, 255, 255, 0.10)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.10)"></i></span><code>rgba(255, 255, 255, 0.10)</code></span>。聚焦状态时边框过渡为 <span class="color-token" data-copy="#8B5CF6"><span class="color-chip"><i style="background:#8B5CF6"></i></span><code>#8B5CF6</code></span>，并附带 3px 柔和外发光 <span class="color-token" data-copy="rgba(139, 92, 246, 0.20)"><span class="color-chip"><i style="background:rgba(139, 92, 246, 0.20)"></i></span><code>rgba(139, 92, 246, 0.20)</code></span>。占位提示文本颜色为 <span class="color-token" data-copy="rgba(255, 255, 255, 0.40)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.40)"></i></span><code>rgba(255, 255, 255, 0.40)</code></span>。</li>
+          <li><strong>表单输入框（Form Inputs）：</strong>标签文字采用 <code class="inline-code">label-md</code> 规格与 <span class="color-token" data-copy="rgba(255, 255, 255, 0.8)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.8)"></i></span><code>rgba(255, 255, 255, 0.8)</code></span> 色彩。错误状态使用醒目的深红边框 <span class="color-token" data-copy="#FF4D4D"><span class="color-chip"><i style="background:#FF4D4D"></i></span><code>#FF4D4D</code></span>，并在下方显示辅助提示文案。</li>
+        </ul>
+
+        <h4>列表与剧集目录（Lists &amp; Episode Directory）</h4>
+        <ul>
+          <li><strong>剧集行（Episode Row）：</strong>水平弹性布局（Flex），包含 16:9 缩略图预览（右下角锚定时长标签）、剧集标题、集数编号以及剧情简介。行与行之间通过 <code class="inline-code">1px solid</code> <span class="color-token" data-copy="rgba(255, 255, 255, 0.05)"><span class="color-chip"><i style="background:rgba(255, 255, 255, 0.05)"></i></span><code>rgba(255, 255, 255, 0.05)</code></span> 分隔。当前激活/正在播放的行使用 <span class="color-token" data-copy="rgba(255, 51, 102, 0.08)"><span class="color-chip"><i style="background:rgba(255, 51, 102, 0.08)"></i></span><code>rgba(255, 51, 102, 0.08)</code></span> 表面着色并配有玫瑰红图标标记。</li>
+        </ul>
+
+        <h4>复选框与开关（Checkboxes &amp; Toggle Switches）</h4>
+        <ul>
+          <li><strong>开关（自动播放 Autoplay、字幕 Subtitles）：</strong>高 28px、宽 48px 的胶囊轨道。未激活态为 <span class="color-token" data-copy="#201935"><span class="color-chip"><i style="background:#201935"></i></span><code>#201935</code></span>，激活态为 <span class="color-token" data-copy="#FF3366"><span class="color-chip"><i style="background:#FF3366"></i></span><code>#FF3366</code></span>。内部配有 22px 圆形滑块，颜色为 <span class="color-token" data-copy="#FFFFFF"><span class="color-chip"><i style="background:#FFFFFF"></i></span><code>#FFFFFF</code></span>，并采用平滑的缓入缓出（ease-in-out）过渡动画。</li>
+        </ul>
+
+        <!-- 实时组件效果示例 -->
+        <div class="demo-strip">
+          <button class="btn-primary-demo" type="button">立即观看 Watch Now</button>
+          <button class="btn-secondary-demo" type="button">预告片 Trailer</button>
+          <span class="chip-active-demo">Slow Burn 慢热</span>
+          <span class="chip-inactive-demo">K-Drama 韩剧</span>
+          <div class="toggle-demo" title="Autoplay ON"><span></span></div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast">已复制色值</div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    let timer = null;
+
+    function copyText(text) {
+      if (!text) return;
+      navigator.clipboard?.writeText(text).catch(() => {});
+      toast.textContent = `已复制色值：${text}`;
+      toast.classList.add('show');
+      clearTimeout(timer);
+      timer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    document.querySelectorAll('[data-copy]').forEach(el => {
+      el.addEventListener('click', () => copyText(el.getAttribute('data-copy')));
+    });
+  </script>
+</body>
+</html>

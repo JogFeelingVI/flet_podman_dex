@@ -17,6 +17,7 @@ from LoveTV.src.control.IconTextButton import IconTextButton
 from LoveTV.src.control.SearchInput import SearchInput
 from LoveTV.src.control.SectionList import MainSection
 from LoveTV.src.themes.default import theme
+from LoveTV.src.model.configuration import configcol
 
 LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
@@ -35,33 +36,24 @@ def navigation(navigate) -> ft.Control:
     ]
     nvabutton = Father_nav(nav_items, navigate=navigate)
     serchinput = SearchInput()
-    lishi_but = IconTextButton("历史", navigate=navigate, route="/author")
-    shoucang_but = IconTextButton("收藏", ft.Icons.FAVORITE)
-    huiyuan_but = IconTextButton("会员", ft.Icons.DIAMOND)
-    row = ft.Container(
-        padding=10,
-        border_radius=15,
-        bgcolor=theme.surface_dim,
-        content=ft.Row(
-            controls=[
-                ft.Image(src="images/smlogo.svg", height=48),
-                ft.VerticalDivider(width=20),
-                nvabutton,
-                ft.VerticalDivider(width=15),
-                serchinput,
-                ft.VerticalDivider(expand=True),
-                lishi_but,
-                shoucang_but,
-                huiyuan_but,
-            ],
-            expand=True,
-        ),
-        shadow=ft.BoxShadow(
-            color=ft.Colors.with_opacity(0.20, theme.primary),
-            blur_radius=2,
-            spread_radius=1,
-        ),
-        clip_behavior=ft.ClipBehavior.NONE,
+    lishibut = IconTextButton("历史", navigate=navigate, route="/author")
+    shoucangbut = IconTextButton("收藏", ft.Icons.FAVORITE)
+    huiyuanbut = IconTextButton(
+        "会员", ft.Icons.DIAMOND, navigate=navigate, route="/login"
+    )
+    row = ft.Row(
+        # vertical_alignment=ft.CrossAxisAlignment.START,
+        alignment=ft.MainAxisAlignment.START,
+        spacing=5,
+        wrap=True,
+        controls=[
+            ft.Image(src="images/smlogo.svg", height=48),
+            nvabutton,
+            serchinput,
+            lishibut,
+            shoucangbut,
+            huiyuanbut,
+        ],
     )
     return row
 
@@ -70,14 +62,11 @@ def build(page: ft.Page, state: dict, navigate) -> ft.View:
     async def open_login():
         await navigate("/login")
 
-    async def _handle_open_login(e):
-        await open_login()
-
     navbar = navigation(navigate)
-    playrecord = MainSection("继续观看", "playrecords")
-    hotmovie = MainSection("Hot Movie", "hotmovie")
-    hottv = MainSection("热门剧集", "hottv")
-    hottvshow = MainSection("综艺大观", "hottvshow")
+    playrecord = MainSection("继续观看", "playrecords", navigate, state)
+    hotmovie = MainSection("Hot Movie", "hotmovie", navigate, state)
+    hottv = MainSection("热门剧集", "hottv", navigate, state)
+    hottvshow = MainSection("综艺大观", "hottvshow", navigate, state)
 
     player_view = ft.View(
         route="/player",
@@ -97,5 +86,12 @@ def build(page: ft.Page, state: dict, navigate) -> ft.View:
         ],
         scroll=ft.ScrollMode.HIDDEN,
     )
-    log.info(f"state is {state}")
+
+    async def loadpage():
+        if state["login_mode"] != True or state["user"] == "":
+            await navigate("/login")
+            return 0
+
+    player_view.did_mount = lambda: page.run_task(loadpage)
+
     return player_view

@@ -1,0 +1,5 @@
+- 简体中文
+> 看电影不仅是忙碌生活中的一种放松方式，更是一场丰富心灵的旅程。通过大银幕，我们可以在短短两小时内体验不同的人生，走进从未去过的世界，从而拓宽视野并加深对人性的理解。优秀的电影往往能引发深刻的情感共鸣，帮助我们释放压力、疗愈情绪。此外，与家人或朋友一起观影，还能创造共同的话题，拉近彼此的距离。总而言之，看电影既能愉悦身心，又能滋养精神，是提升生活品质的绝佳选择。
+
+- English
+> Watching movies is not only a way to unwind from our busy lives, but also a journey that enriches the soul. Through the big screen, we can experience different lives and step into worlds we have never visited in just two hours, thereby broadening our horizons and deepening our understanding of human nature. Great films often strike a deep emotional chord, helping us relieve stress and heal our emotions. Moreover, watching movies with family or friends creates shared topics of conversation and brings us closer together. In short, watching movies both delights the body and mind and nourishes the spirit, making it a wonderful way to enhance our quality of life.

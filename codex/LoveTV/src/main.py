@@ -6,7 +6,7 @@ import logging
 
 import flet as ft
 
-from LoveTV.src.pages import Author, Login, Player
+from LoveTV.src.pages import Author, Login, Player, Detail, Videos, Connect
 from LoveTV.src.storage import login_state
 from LoveTV.src.themes.default import theme
 
@@ -21,7 +21,7 @@ async def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = theme.surface
-    page.padding = 20
+    page.padding = 0
     page.expand = True
 
     state = {"login_mode": False, "user": ""}
@@ -31,20 +31,18 @@ async def main(page: ft.Page):
         "/login": Login.build,
         "/player": Player.build,
         "/author": Author.build,
-        "/connect": Author.build,
+        "/connect": Connect.build,
+        "/videos": Videos.build,
+        "/detail": Detail.build,
     }
 
     state.update(login_state())
-
-    log.info(f"state {state}")
 
     async def navigate(route: str):
         await page.push_route(route)
 
     def render_route(e=None):
-        log.info(f"rule is {e}")
         page.views.clear()
-
         # 根页面作为返回栈的起点
         page.views.append(builders[e](page, state, navigate))
 

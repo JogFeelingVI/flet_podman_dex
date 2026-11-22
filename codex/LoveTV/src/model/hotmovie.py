@@ -11,14 +11,19 @@ from dataclasses import dataclass
 from typing import Literal
 
 import httpx2
-
+from cashews import cache
+from LoveTV.src.model.detailentry import videoCard
 from LoveTV.src.model.timezone import weekday
+from LoveTV.src.model.envpath import app_Video_Cache
 
 LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("app.hotmovie")
 
+cache.setup(f"disk://?directory=.{app_Video_Cache()}")
 
+
+# @cache(ttl=7200)
 @dataclass
 class QueryParam:
     kind: Literal["movie", "tv"]
@@ -31,6 +36,7 @@ hotTv = QueryParam("tv", "最近热门", "tv")
 hotTvShow = QueryParam("tv", "show", "show")
 
 
+@cache(ttl=7200)
 async def fetch_douban_res(
     param=hotMovie,
     limit: int = 20,
@@ -69,35 +75,7 @@ async def fetch_douban_res(
         title = it.get("title")
         if not item_id or not title:
             continue  # 对应 toDoubanMovie() 返回 null 的情况
-        pic = it.get("pic") or {}
-        cover = pic.get("large") or pic.get("normal") or pic.get("small") or ""
-        rating = it.get("rating") or {}
-        rate_val = rating.get("value")
-        rate = str(rate_val) if rate_val and rate_val > 0 else None
-        subtitle = it.get("card_subtitle") or ""
-        year_m = re.search(r"(\d{4})", subtitle)
-        year = year_m.group(1) if year_m else ""
-        ep_info = it.get("episodes_info") or ""
-        ep_m = re.search(r"(\d+)集", ep_info)
-        total_episodes = int(ep_m.group(1)) if ep_m else -1
-        out.append(
-            {
-                "id": item_id,
-                "source": "douban",
-                "title": title,
-                "source_name": None,
-                "year": year,
-                "cover": cover,
-                "index": 0,
-                "total_episodes": total_episodes,
-                "play_time": 0,
-                "total_time": 0,
-                "saveTime": None,  # 客户端用 System.currentTimeMillis()
-                "save_time": title,
-                "douban_id": item_id,
-                "rate": rate,
-            }
-        )
+        out.append(videoCard.from_douban(it))
     return out
 
 

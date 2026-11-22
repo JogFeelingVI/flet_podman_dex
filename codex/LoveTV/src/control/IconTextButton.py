@@ -38,6 +38,7 @@ class IconTextButton(ft.Container):
                 controls=[self.icon, self.lable],
                 alignment=ft.Alignment.CENTER,
                 spacing=5,
+                tight=True,
             ),
             on_hover=self._handle_hover,
             on_click=self._handle_click,

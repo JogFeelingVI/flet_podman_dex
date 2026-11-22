@@ -27,3 +27,9 @@ def app_cache_path() -> Path:
     path = CACHE_PATH / "covers"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def app_Video_Cache() -> Path:
+    path = CACHE_PATH / "videoscache"
+    path.mkdir(parents=True, exist_ok=True)
+    return path

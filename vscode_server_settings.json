@@ -1,0 +1,31 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.venv/**": true,
+    "**/venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.ruff_cache/**": true,
+    "**/build/**": true,
+    "**/storage/**": true,
+    "**/assets/**": true
+  },
+  "search.exclude": {
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/build": true,
+    "**/assets": true
+  },
+  "python.analysis.indexing": false,
+  "python.analysis.autoImportCompletions": false,
+  "python.analysis.diagnosticMode": "openFilesOnly",
+  "python.analysis.exclude": [
+    "**/.venv/**",
+    "**/build/**",
+    "**/assets/**"
+  ],
+  "git.autorefresh": false,
+  "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
+  "extensions.autoUpdate": false
+}
+

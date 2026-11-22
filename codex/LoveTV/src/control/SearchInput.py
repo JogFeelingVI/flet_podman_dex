@@ -22,7 +22,6 @@ class SearchInput(ft.Container):
             hint_style=ft.TextStyle(
                 size=12, color=ft.Colors.with_opacity(0.45, theme.on_surface)
             ),
-            width=120,
             text_size=12,
             color=theme.on_surface,
             border=ft.NoInputBorder(),
@@ -39,6 +38,7 @@ class SearchInput(ft.Container):
         )
         super().__init__(
             height=36,
+            width=138,
             border_radius=18,
             bgcolor=ft.Colors.with_opacity(0.70, theme.secondary_container),
             padding=ft.Padding.symmetric(vertical=10, horizontal=5),
@@ -50,7 +50,6 @@ class SearchInput(ft.Container):
                     self.search_input,
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                tight=True,
             ),
             clip_behavior=ft.ClipBehavior.NONE,
             **kwds,

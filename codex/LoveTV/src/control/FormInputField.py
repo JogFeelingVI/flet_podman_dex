@@ -33,6 +33,7 @@ class FormInputField(ft.Container):
         can_reveal_password: bool = False,
         **kwargs,
     ):
+        self._mount = False
         self.selected = False
         self.text_field = ft.TextField(
             value=value,
@@ -41,31 +42,30 @@ class FormInputField(ft.Container):
             color=theme.on_surface,
             border=ft.NoInputBorder(),
             hint_text=hint,
-            expand=3,
+            col={"xs": 7, "sm": 7, "md": 8, "lg": 9, "xl": 9, "xxl": 9},
             on_focus=self.select,
             on_blur=self.deselect,
         )
         self.label = label
         super().__init__(
-            max_width=400,
             bgcolor=theme.surface_bright,
             padding=ft.Padding(10, 5, 10, 5),
             border_radius=10,
             opacity=0.65,
-            content=ft.Row(
+            content=ft.ResponsiveRow(
                 controls=[
                     ft.Text(
                         self.label,
                         size=16,
                         color=theme.on_surface_variant,
                         text_align=ft.TextAlign.RIGHT,
-                        expand=1,
+                        col={"xs": 5, "sm": 5, "md": 4, "lg": 3, "xl": 3, "xxl": 3},
                     ),
                     self.text_field,
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=5,
-                expand=True,
             ),
             **kwargs,
             on_hover=self.handle_on_hover,
@@ -113,6 +113,14 @@ class FormInputField(ft.Container):
             self.selected = False
         self.update()
 
+    def did_mount(self):
+        self._mount = True
+        return super().did_mount()
+
+    def will_unmount(self):
+        self._mount = False
+        return super().will_unmount()
+
     @property
     def text(self) -> str:
         return self.text_field.value
@@ -120,4 +128,5 @@ class FormInputField(ft.Container):
     @text.setter
     def text(self, new_value: str):
         self.text_field.value = new_value
-        self.update()
+        if self._mount:
+            self.text_field.update()

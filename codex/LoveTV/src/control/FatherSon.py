@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import flet as ft
 
 from LoveTV.src.themes.default import theme
+from LoveTV.src.model.configuration import configcol
 
 LOG_LEVEL = logging.INFO
 logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s %(name)s: %(message)s")
@@ -45,7 +46,7 @@ class Son_nav(ft.Container):
             height=38,
             border_radius=19,
             content=self.text_control,
-            padding=ft.Padding.symmetric(horizontal=15, vertical=5),
+            padding=ft.Padding.symmetric(horizontal=7, vertical=5),
             bgcolor=bg_color,
             animate=ft.Animation(duration=200, curve=ft.AnimationCurve.EASE_OUT),
             on_hover=self._handle_hover,
@@ -89,13 +90,13 @@ class Father_nav(ft.Container):
         super().__init__(
             content=ft.Row(
                 controls=self.buttons,
-                spacing=5,  # 按钮之间的间距
+                # spacing=5,  # 按钮之间的间距
                 tight=True,  # 紧凑包裹
             ),
             height=48,
             padding=5,
             border_radius=24,
-            bgcolor=ft.Colors.with_opacity(0.30, theme.surface_bright),
+            # bgcolor=ft.Colors.with_opacity(0.30, theme.surface_bright),
             **kwds,
         )
 
