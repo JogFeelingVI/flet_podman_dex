@@ -140,6 +140,63 @@ class CoverStack(ft.Stack):
 # endregion
 
 
+# region IconButton
+class IconButton(ft.Container):
+    def __init__(
+        self,
+        height: int = 60,
+        icon: ft.IconData = None,
+        text: str = None,
+        plan: str = "a",
+        **kwds,
+    ):
+        icon = icon if icon else ft.Icons.FAVORITE
+        plan = plan if plan in "ab" else "a"
+        _rowline = ft.Row(
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            tight=True,
+        )
+        _rowctls = []
+        _rowctls.append(ft.Icon(icon=ft.Icons.PLAY_ARROW, size=18, color=theme.surface))
+        if text:
+            _rowctls.append(
+                ft.Text("立即播放第1集", size=18, color=theme.surface, weight="bold"),
+            )
+        shadow_plan = {
+            "a": ft.BoxShadow(6, 13, theme.on_primary),
+            "b": ft.BoxShadow(
+                6, 13, ft.Colors.with_opacity(0.6, theme.surface_container_highest)
+            ),
+        }
+
+        kwds.setdefault("height", height)
+        kwds.setdefault("border_radius", int(height / 2))
+        kwds.setdefault("padding", ft.Padding.symmetric(horizontal=24))
+        kwds.setdefault("shadow", shadow_plan["a"])
+        kwds.setdefault("content", _rowline)
+        super().__init__(**kwds)
+
+
+"""self.playnow = ft.Container(
+    height=60,
+    border_radius=30,
+    bgcolor=theme.primary_container,
+    padding=ft.Padding.symmetric(horizontal=24),
+    content=ft.Row(
+        controls=[
+            ft.Icon(icon=ft.Icons.PLAY_ARROW, size=18, color=theme.surface),
+            ft.Text(
+                "立即播放第1集", size=18, color=theme.surface, weight="bold"
+            ),
+        ],
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        tight=True,
+    ),
+    shadow=ft.BoxShadow(6, 13, theme.on_primary),
+)"""
+# endregion
+
+
 # region 影片详细信息
 class MoiveDetailInfo(ft.Container):
     def __init__(
@@ -189,11 +246,6 @@ class MoiveDetailInfo(ft.Container):
                 # 让引用块（>）的背景也完全透明
                 blockquote_decoration=ft.BoxDecoration(
                     bgcolor=ft.Colors.TRANSPARENT,
-                    border=ft.Border.only(
-                        bottom=ft.border.BorderSide(
-                            2, ft.Colors.with_opacity(0.07, theme.surface_tint)
-                        )
-                    ),  # 保留左侧竖线装饰
                 ),
             ),
             expand=True,
@@ -212,6 +264,7 @@ class MoiveDetailInfo(ft.Container):
                     ),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                tight=True,
             ),
             shadow=ft.BoxShadow(6, 13, theme.on_primary),
         )
@@ -229,6 +282,7 @@ class MoiveDetailInfo(ft.Container):
                     ft.Text("收藏", size=16, color=theme.on_surface, weight="bold"),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                tight=True,
             ),
             shadow=ft.BoxShadow(
                 6, 13, ft.Colors.with_opacity(0.6, theme.surface_container_highest)
@@ -240,6 +294,7 @@ class MoiveDetailInfo(ft.Container):
             alignment=ft.MainAxisAlignment.START,
             controls=[self.playnow, self.favoritemkv],
             spacing=20,
+            wrap=True,
         )
 
         super().__init__(
@@ -261,12 +316,6 @@ class MoiveDetailInfo(ft.Container):
                     self.buttonline,
                 ],
                 spacing=15,
-            ),
-            image=ft.DecorationImage(
-                src="images/37f4cae9.webp",  # 支持网络 URL 或本地路径（如 "assets/poster.jpg"）
-                fit=ft.BoxFit.SCALE_DOWN,  # 填充模式：COVER 保持比例铺满容器并裁剪多余部分（最常用）
-                opacity=0.6,  # 可选：调整背景图透明度（0.0 ~ 1.0）
-                # color_filter=ft.ColorFilter(color=theme.surface, blend_mode=ft.BlendMode.SOFT_LIGHT),
             ),
             **kwds,
         )

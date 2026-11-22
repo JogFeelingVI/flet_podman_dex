@@ -31,10 +31,10 @@ spec:
       value: "--max-old-space-size=512"
     - name: UV_CACHE_DIR
       value: /root/.cache/uv
-    image: localhost/vscode-dev-env
-    name: vscode-dev-env
+    image: localhost/flet-podman-dex
+    name: flet-podman-dex
     command: ["/bin/sh", "-c"]
-    args: [echo "root:$(SSH_PASS)" | chpasswd && /usr/sbin/sshd -D]
+    args: ['echo "root:${SSH_PASS}" | chpasswd && /usr/sbin/sshd -D']
     ports:
     - containerPort: 22
       hostPort: 2222
